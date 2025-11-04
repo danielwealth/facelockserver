@@ -4,7 +4,6 @@ const path = require('path');
 const express = require('express');
 const multer = require('multer');
 const crypto = require('crypto');
-const fs = require('fs');
 const path = require('path');
 
 const app = express();
