@@ -27,7 +27,6 @@ app.post('/upload', upload.single('image'), (req, res) => {
   });
 });
 // Save descriptor to JSON or database
-const fs = require('fs');
 const descriptor = req.body.descriptor; // from frontend
 fs.writeFileSync(`faces/${req.file.filename}.json`, JSON.stringify(descriptor));
 
