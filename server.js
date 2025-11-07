@@ -19,10 +19,10 @@ app.use(session({
 }));
 
 // Mount routes
-app.use('/auth', authRoute);
-app.use('/image', imageRoute);
-app.use('/biometric', biometricRoute);
-app.use('/match', matchRoute);
-app.use('/unlock', unlockImageRoute);
+app.use('/auth', authRoutes);
+app.use('/image', imageRoutes);
+app.use('/biometric', biometricRoutes);
+app.use('/match', matchRoutes);
+app.use('/unlock', unlockImage);
 
 app.listen(5000, () => console.log('Server running on port 5000'));
