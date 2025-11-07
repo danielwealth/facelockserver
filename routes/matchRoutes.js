@@ -1,4 +1,5 @@
 // server/routes/matchRoutes.js
+const router = express.Router();
 router.get('/match-history', (req, res) => {
   if (!req.session.authenticated) {
     return res.status(403).send('Unauthorized');
