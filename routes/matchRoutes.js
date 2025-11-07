@@ -1,5 +1,5 @@
 // server/routes/matchRoutes.js
-app.get('/match-history', (req, res) => {
+router.get('/match-history', (req, res) => {
   if (!req.session.authenticated) {
     return res.status(403).send('Unauthorized');
   }
@@ -8,7 +8,7 @@ app.get('/match-history', (req, res) => {
   // server/routes/matchRoutes.js
 const MatchHistory = require('../models/MatchHistory');
 
-app.get('/match-history', async (req, res) => {
+router.get('/match-history', async (req, res) => {
   if (!req.session.authenticated) {
     return res.status(403).send('Unauthorized');
   }
@@ -26,3 +26,4 @@ app.get('/match-history', async (req, res) => {
 
   res.json(history);
 });
+module.exports= router;
