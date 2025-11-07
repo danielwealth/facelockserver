@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-app.get('/unlocked-images', (req, res) => {
+router.get('/unlocked-images', (req, res) => {
   // For demo: decrypt all locked images with a fixed key
   const key = 'biometric-unlock-key'; // Replace with secure key per user
   const files = fs.readdirSync('locked/');
@@ -21,3 +21,4 @@ app.get('/unlocked-images', (req, res) => {
 
   res.json(unlocked);
 });
+module.exports = router;
