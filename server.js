@@ -25,8 +25,6 @@ app.post('/upload', upload.single('image'), (req, res) => {
   });
 });
 // Save descriptor to JSON or database
-const descriptor = req.body.descriptor; // from frontend
-fs.writeFileSync(`faces/${req.file.filename}.json`, JSON.stringify(descriptor));
 
 function euclideanDistance(a, b) {
   return Math.sqrt(a.reduce((sum, val, i) => sum + Math.pow(val - b[i], 2), 0));
