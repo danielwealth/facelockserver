@@ -13,4 +13,4 @@ router.post('/verify-authentication', async (req, res) => {
 
   res.json({ success: verification.verified });
 });
-module.export = router;
+module.exports = router;
