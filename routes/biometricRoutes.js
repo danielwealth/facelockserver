@@ -1,4 +1,4 @@
-
+const express = require('express');
 const router = express.Router();
 router.post('/verify-authentication', async (req, res) => {
   const verification = await verifyAuthenticationResponse({
