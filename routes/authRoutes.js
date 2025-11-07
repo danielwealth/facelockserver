@@ -1,12 +1,20 @@
+// server/routes/authRoutes.js
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const twilio = require('twilio');
+const User = require('../models/User');
+
+const router = express.Router();
+
+// Twilio client
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
-
-
-// server/routes/authRoutes.js
-app.post('/logout', (req, res) => {
+// Logout
+router.post('/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) {
       return res.status(500).send('Logout failed');
@@ -16,13 +24,7 @@ app.post('/logout', (req, res) => {
   });
 });
 
-
-// server/routes/authRoutes.js
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const User = require('../models/User');
-const router = express.Router();
-
+// Register
 router.post('/register', async (req, res) => {
   const { email, password } = req.body;
   const hash = await bcrypt.hash(password, 10);
@@ -32,25 +34,24 @@ router.post('/register', async (req, res) => {
   res.send('Registered successfully');
 });
 
+// Login
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
-  if (!user || !(await user.comparePassword(password))) {
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     return res.status(401).send('Invalid credentials');
   }
   req.session.userId = user._id;
   res.send('Logged in successfully');
 });
 
+// Current user
 router.get('/me', (req, res) => {
   if (!req.session.userId) return res.status(401).send('Not logged in');
   res.send({ userId: req.session.userId });
 });
 
-// server/routes/authRoutes.js
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-
+// Request password reset
 router.post('/request-reset', async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -71,9 +72,8 @@ router.post('/request-reset', async (req, res) => {
 
   res.send('Reset link sent');
 });
-// server/routes/authRoutes.js
 
-
+// Request OTP
 router.post('/request-otp', async (req, res) => {
   const { phone } = req.body;
   const user = await User.findOne({ phone });
@@ -86,12 +86,11 @@ router.post('/request-otp', async (req, res) => {
 
   await client.messages.create({
     body: `Your OTP is ${otp}`,
-    from: 'your_twilio_number',
+    from: process.env.TWILIO_PHONE_NUMBER, // set in env
     to: phone,
   });
 
   res.send('OTP sent');
 });
-
 
 module.exports = router;
