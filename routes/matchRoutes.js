@@ -1,4 +1,5 @@
 // server/routes/matchRoutes.js
+const express = require('express');
 const router = express.Router();
 router.get('/match-history', (req, res) => {
   if (!req.session.authenticated) {
