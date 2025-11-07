@@ -1,4 +1,5 @@
 // server/routes/imageRoutes.js
+const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
