@@ -5,7 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const biometricRoutes = require('./routes/biometricRoutes');
 const matchRoutes = require('./routes/matchRoutes');
-const unlockImage = require('./routes/unlockImageRoutes');
+const unlockImage = require('./routes/unlockImage');
 
 const app = express();
 app.use(bodyParser.json());
