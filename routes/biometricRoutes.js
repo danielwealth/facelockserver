@@ -1,4 +1,4 @@
-app.post('/verify-authentication', async (req, res) => {
+router.post('/verify-authentication', async (req, res) => {
   const verification = await verifyAuthenticationResponse({
     response: req.body,
     expectedChallenge: userDB.challenge,
@@ -13,3 +13,4 @@ app.post('/verify-authentication', async (req, res) => {
 
   res.json({ success: verification.verified });
 });
+module.export = router;
