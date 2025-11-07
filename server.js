@@ -1,11 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-const authRoute = require('./routes/authRoute');
-const imageRoute = require('./routes/imageRoute');
-const biometricRoute = require('./routes/biometricRoute');
-const matchRoute = require('./routes/matchRoute');
-const unlockImageRoute = require('./routes/unlockImageRoute');
+const authRoutes = require('./routes/authRoutes');
+const imageRoutes = require('./routes/imageRoutes');
+const biometricRoutes = require('./routes/biometricRoutes');
+const matchRoutes = require('./routes/matchRoutes');
+const unlockImageRoutes = require('./routes/unlockImageRoutes');
 
 const app = express();
 app.use(bodyParser.json());
