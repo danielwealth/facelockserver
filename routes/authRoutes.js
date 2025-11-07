@@ -4,7 +4,8 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const twilio = require('twilio');
-const User = require('../models/User');
+const User = require('../models/user');
+const faceDescriptor= require('../models/faceDescriptor');
 
 const router = express.Router();
 
