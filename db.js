@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/facelock';
+const mongoURI = process.env.MONGO_URI || 'mongodb+srv://ohimaidaniel_db_user:1PKzgt1cp5iUVF4j@cluster0.1snxrtd.mongodb.net/?appName=Cluster0';
 
 console.log("📡 Attempting to connect to MongoDB...");
 
