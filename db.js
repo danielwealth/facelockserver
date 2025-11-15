@@ -1,9 +1,13 @@
 // server/db.js
-const mongoose = require('mongoose');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 
-mongoose.connect('mongodb://localhost:27017/facelock', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI })
+}));
+
 
 module.exports = mongoose;
