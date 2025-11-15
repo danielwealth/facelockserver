@@ -11,13 +11,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Session middleware
-app.use(session({
-  secret: 'your_session_secret',
-  resave: false,
-  saveUninitialized: true
-}));
-
 // Mount routes
 app.use('/auth', authRoutes);
 app.use('/image', imageRoutes);
