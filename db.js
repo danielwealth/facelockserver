@@ -1,13 +1,7 @@
 // server/db.js
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
+// server/db.js
+const mongoose = require('mongoose');
 
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI })
-}));
-
-
+mongoose.connect(process.env.MONGO_URI); // no extra options needed
 module.exports = mongoose;
+
