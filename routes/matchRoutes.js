@@ -1,31 +1,32 @@
 // server/routes/matchRoutes.js
 const express = require('express');
 const router = express.Router();
-router.get('/match-history', (req, res) => {
-  if (!req.session.authenticated) {
-    return res.status(403).send('Unauthorized');
-  }
-
-  // Replace with DB query
-  // server/routes/matchRoutes.js
 const MatchHistory = require('../models/MatchHistory');
 
+// GET match history for authenticated user
 router.get('/match-history', async (req, res) => {
-  if (!req.session.authenticated) {
-    return res.status(403).send('Unauthorized');
-  }
-
   try {
-    const history = await MatchHistory.find({ userId: req.session.userId })
-      .sort({ timestamp: -1 });
-    res.json(history);
+    // ✅ Ensure user is authenticated
+    if (!req.session || !req.session.authenticated) {
+      return res.status(403).json({ success: false, error: 'Unauthorized' });
+    }
+
+    // ✅ Ensure we have a userId in session
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'Missing user ID in session' });
+    }
+
+    // ✅ Query DB for this user's match history
+    const history = await MatchHistory.find({ userId })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    res.json({ success: true, history });
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
+    console.error('Error fetching match history:', err);
+    res.status(500).json({ success: false, error: 'Server error while fetching match history' });
   }
 });
 
-
-  res.json(history);
-});
-module.exports= router;
+module.exports = router;
