@@ -4,8 +4,8 @@ router.post('/verify-authentication', async (req, res) => {
   const verification = await verifyAuthenticationResponse({
     response: req.body,
     expectedChallenge: userDB.challenge,
-    expectedOrigin: 'http://localhost:3000',
-    expectedRPID: 'localhost',
+    expectedOrigin: 'process.env.API_URI',
+    expectedRPID: 'process.env.FRONTEND_ORIGIN',
     authenticator: userDB.credential,
   });
 
