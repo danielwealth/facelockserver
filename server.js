@@ -1,13 +1,8 @@
-// server.js
-require('dotenv').config(); // Load environment variables
-
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const helmet = require('helmet');
+const helmet = require('helmet');   // 👈 add this
 
-// Import routes
 const authRoutes = require('./routes/authRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const biometricRoutes = require('./routes/biometricRoutes');
@@ -16,44 +11,48 @@ const unlockRoutes = require('./routes/unlockImage');
 
 const app = express();
 
-// ✅ Connect to MongoDB Atlas
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log("✅ Connected to MongoDB Atlas"))
-.catch(err => console.error("❌ MongoDB connection error:", err));
-
 // ✅ Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ CORS: allow frontend domain (Netlify) to talk to backend (Render)
+// ✅ CORS
 app.use(cors({
   origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
   credentials: true,
 }));
 
-// ✅ Secure session configuration
+// ✅ Helmet with custom CSP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],   // 👈 allow images
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "https:"],
+    },
+  },
+}));
+
+// ✅ Session
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'supersecret', // set SESSION_SECRET in .env
+  secret: process.env.SESSION_SECRET || 'supersecret',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // only send cookies over HTTPS in prod
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax',
   },
 }));
 
-// ✅ Mount routes
+// ✅ Routes
 app.use('/auth', authRoutes);
 app.use('/image', imageRoutes);
 app.use('/biometric', biometricRoutes);
 app.use('/match', matchRoutes);
 app.use('/unlock', unlockRoutes);
 
-// ✅ Health check route
+// ✅ Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
