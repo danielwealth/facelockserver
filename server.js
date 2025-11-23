@@ -5,6 +5,7 @@ const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const helmet = require('helmet');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
