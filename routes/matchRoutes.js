@@ -19,10 +19,16 @@ router.get('/match-history', async (req, res) => {
 
     // ✅ Query DB for this user's match history
     const history = await MatchHistory.find({ userId })
-      .sort({ timestamp: -1 })
+      .sort({ createdAt: -1 }) // use createdAt instead of timestamp
       .lean();
 
-    res.json({ success: true, history });
+    // ✅ Format response for client
+    const formatted = history.map(h => ({
+      name: h.name,
+      timestamp: h.createdAt
+    }));
+
+    res.json(formatted);
   } catch (err) {
     console.error('Error fetching match history:', err);
     res.status(500).json({ success: false, error: 'Server error while fetching match history' });
