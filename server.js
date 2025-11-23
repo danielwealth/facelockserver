@@ -1,22 +1,31 @@
 // server.js
-require('dotenv').config(); // Load environment variables from .env
+require('dotenv').config(); // Load environment variables
 
 const express = require('express');
-const bodyParser = require('body-parser');
 const session = require('express-session');
 const cors = require('cors');
+const mongoose = require('mongoose');
 
+// Import routes
 const authRoutes = require('./routes/authRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const biometricRoutes = require('./routes/biometricRoutes');
 const matchRoutes = require('./routes/matchRoutes');
-const unlockImage = require('./routes/unlockImage');
+const unlockRoutes = require('./routes/unlockImage');
 
 const app = express();
 
+// ✅ Connect to MongoDB Atlas
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log("✅ Connected to MongoDB Atlas"))
+.catch(err => console.error("❌ MongoDB connection error:", err));
+
 // ✅ Middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ✅ CORS: allow frontend domain (Netlify) to talk to backend (Render)
 app.use(cors({
@@ -41,7 +50,7 @@ app.use('/auth', authRoutes);
 app.use('/image', imageRoutes);
 app.use('/biometric', biometricRoutes);
 app.use('/match', matchRoutes);
-app.use('/unlock', unlockImage);
+app.use('/unlock', unlockRoutes);
 
 // ✅ Health check route
 app.get('/health', (req, res) => {
