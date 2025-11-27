@@ -43,6 +43,8 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "https:"],
+      fontSrc: ["'self'", "https:"],
+      connectSrc: ["'self'", "https:"],
     },
   },
 }));
