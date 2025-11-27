@@ -62,7 +62,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'none',
     // Set domain if you need cross-subdomain cookies
     // domain: '.yourdomain.com'
   },
