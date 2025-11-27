@@ -73,6 +73,9 @@ app.use('/image', imageRoutes);
 app.use('/biometric', biometricRoutes);
 app.use('/match', matchRoutes);
 app.use('/unlock', unlockRoutes);
+app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
+app.use('/images', require('./routes/imageRoutes'));
+
 
 // Health check
 app.get('/health', (req, res) => {
