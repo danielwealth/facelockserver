@@ -14,11 +14,10 @@ const matchRoutes = require('./routes/matchRoutes');
 const unlockRoutes = require('./routes/unlockImage');
 
 const path = require('path');
-app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
-app.use('/images', require('./routes/imageRoutes'));
 
 
 const app = express();
+
 
 // Behind a proxy (Render), enable trust proxy so secure cookies work
 app.set('trust proxy', 1);
@@ -75,6 +74,7 @@ app.use('/match', matchRoutes);
 app.use('/unlock', unlockRoutes);
 app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
 app.use('/images', require('./routes/imageRoutes'));
+
 
 
 // Health check
