@@ -6,6 +6,48 @@ const path = require('path');
 const crypto = require('crypto');
 
 const router = express.Router();
+const multer = require('multer');
+
+// configure multer to save uploaded files temporarily
+const upload = multer({ dest: 'temp/' });
+
+// POST /images/upload
+router.post('/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.session || !req.session.authenticated) {
+      return res.status(403).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const key = req.session.key;
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'Missing encryption key' });
+    }
+
+    const lockedDir = path.join(__dirname, '../locked');
+    if (!fs.existsSync(lockedDir)) {
+      fs.mkdirSync(lockedDir);
+    }
+
+    const inputPath = req.file.path;
+    const outputPath = path.join(lockedDir, req.file.filename + '.enc');
+
+    const cipher = crypto.createCipher('aes-256-cbc', key);
+    const input = fs.createReadStream(inputPath);
+    const output = fs.createWriteStream(outputPath);
+
+    input.pipe(cipher).pipe(output);
+
+    output.on('finish', () => {
+      // cleanup temp file
+      fs.unlinkSync(inputPath);
+      res.json({ success: true, path: outputPath });
+    });
+  } catch (err) {
+    console.error('Upload failed:', err);
+    res.status(500).json({ success: false, error: 'Server error during upload' });
+  }
+});
+
 
 // GET unlocked images
 router.get('/unlocked-images', (req, res) => {
