@@ -64,7 +64,7 @@ router.post('/request-reset', async (req, res) => {
   await user.save();
 
   const transporter = nodemailer.createTransport({ /* SMTP config */ });
-  const resetLink = `http://localhost:3000/reset-password/${token}`;
+  const resetLink = `process.env.REACT_APP_API_URI/reset-password/${token}`;
   await transporter.sendMail({
     to: email,
     subject: 'Password Reset',
