@@ -29,7 +29,12 @@ router.post('/upload', upload.single('image'), (req, res) => {
     const inputPath = req.file.path;
     const outputPath = path.join(lockedDir, req.file.filename + '.enc');
 
-    const cipher = crypto.createCipher('aes-256-cbc', key);
+    const algorithm = 'aes-256-cbc';
+    const keyBuffer = Buffer.from(req.session.key, 'hex'); // 32 bytes
+    const iv = crypto.randomBytes(16); // 16 bytes IV
+
+    const cipher = crypto.createCipheriv(algorithm, keyBuffer, iv);
+
     const input = fs.createReadStream(inputPath);
     const output = fs.createWriteStream(outputPath);
 
@@ -74,7 +79,8 @@ router.get('/unlocked-images', (req, res) => {
     files.forEach(file => {
       try {
         const input = fs.createReadStream(path.join(lockedDir, file));
-        const decipher = crypto.createDecipher('aes-256-cbc', key);
+        const decipher = crypto.createDecipheriv(algorithm, keyBuffer, iv);
+
         const outputPath = path.join(unlockedDir, file.replace('.enc', '.jpg'));
         const output = fs.createWriteStream(outputPath);
 
