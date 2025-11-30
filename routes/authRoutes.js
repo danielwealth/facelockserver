@@ -1,10 +1,7 @@
 const express = require('express');
-const crypto = require('crypto');
 const router = express.Router();
-const express = require('express');
 const crypto = require('crypto');
 const twilio = require('twilio');
-const router = express.Router();
 
 // Load Twilio credentials from environment
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
