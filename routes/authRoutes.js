@@ -1,31 +1,29 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 
 // POST /auth/login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
 
-  // Replace with real user validation (DB lookup, hashing, etc.)
-  if (username === 'daniel' && password === 'secret') {
-    // Mark session as authenticated
+  // Replace with real validation (DB lookup, hashing, etc.)
+  if (username === 'ohimaidaniel_db_user' && password === 'english3924') {
     req.session.authenticated = true;
 
-    // Generate or assign encryption key (for demo, static string)
-    req.session.key = 'myEncryptionKey';
+    // Generate a secure random 32-byte key for AES-256
+    const key = crypto.randomBytes(32).toString('hex');
+    req.session.key = key;
 
     return res.json({ success: true, message: 'Logged in successfully' });
   }
 
-  // If credentials are wrong → 401 Unauthorized
   res.status(401).json({ error: 'Invalid credentials' });
 });
 
 // GET /auth/logout
 router.get('/logout', (req, res) => {
   req.session.destroy(err => {
-    if (err) {
-      return res.status(500).json({ error: 'Failed to log out' });
-    }
+    if (err) return res.status(500).json({ error: 'Failed to log out' });
     res.json({ success: true, message: 'Logged out successfully' });
   });
 });
