@@ -1,13 +1,26 @@
 const express = require('express');
 const crypto = require('crypto');
 const router = express.Router();
+const express = require('express');
+const crypto = require('crypto');
+const twilio = require('twilio');
+const router = express.Router();
+
+// Load Twilio credentials from environment
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const apiKey = process.env.TWILIO_API_KEY;
+const apiSecret = process.env.TWILIO_API_SECRET;
+
+// Initialize Twilio client
+const client = twilio(accountSid, authToken);
 
 // --- Session-based login/logout/status ---
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
 
   // Replace with real validation (DB lookup, hashing, etc.)
-  if (username === 'daniel' && password === 'secret') {
+  if (username === 'ohimaidaniel_db_user' && password === 'english3924') {
     req.session.authenticated = true;
 
     // Generate a secure random 32-byte encryption key per session
