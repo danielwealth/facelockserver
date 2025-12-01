@@ -1,34 +1,53 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
-const twilio = require('twilio');
+const User = require('../models/User'); // your User.js model
 
-// Load Twilio credentials from environment
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const apiKey = process.env.TWILIO_API_KEY;
-const apiSecret = process.env.TWILIO_API_SECRET;
+// --- Signup ---
+router.post('/signup', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-// Initialize Twilio client
-const client = twilio(accountSid, authToken);
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(409).json({ error: 'User already exists' });
 
-// --- Session-based login/logout/status ---
-router.post('/login', (req, res) => {
-  const { username, password } = req.body;
+    const newUser = new User({ email, password });
+    await newUser.save();
 
-  // Replace with real validation (DB lookup, hashing, etc.)
-  if (username === 'ohimaidaniel_db_user' && password === 'english3924') {
     req.session.authenticated = true;
-
-    // Generate a secure random 32-byte encryption key per session
+    req.session.user = { id: newUser._id, email: newUser.email };
     req.session.key = crypto.randomBytes(32).toString('hex');
 
-    return res.json({ success: true, message: 'Logged in successfully' });
+    res.json({ success: true, message: 'Signed up successfully', user: newUser.email });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Failed to sign up' });
   }
-
-  res.status(401).json({ error: 'Invalid credentials' });
 });
 
+// --- Login ---
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const match = await user.comparePassword(password);
+    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+
+    req.session.authenticated = true;
+    req.session.user = { id: user._id, email: user.email };
+    req.session.key = crypto.randomBytes(32).toString('hex');
+
+    res.json({ success: true, message: 'Logged in successfully', user: user.email });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Failed to log in' });
+  }
+});
+
+// --- Logout ---
 router.get('/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) return res.status(500).json({ error: 'Failed to log out' });
@@ -36,40 +55,22 @@ router.get('/logout', (req, res) => {
   });
 });
 
+// --- Status ---
 router.get('/status', (req, res) => {
   if (req.session && req.session.authenticated) {
-    return res.json({ authenticated: true });
+    return res.json({ authenticated: true, user: req.session.user });
   }
   res.status(403).json({ authenticated: false, error: 'Unauthorized' });
 });
 
-// --- Twilio token route ---
+// --- Twilio token (placeholder) ---
 router.post('/twilio-token', async (req, res) => {
-  try {
-    // Example: generate Twilio access token
-    // const token = generateTwilioToken(req.body.identity);
-    // res.json({ token });
-
-    res.json({ success: true, message: 'Twilio token endpoint placeholder' });
-  } catch (err) {
-    console.error('Twilio token error:', err);
-    res.status(500).json({ error: 'Failed to generate Twilio token' });
-  }
+  res.json({ success: true, message: 'Twilio token endpoint placeholder' });
 });
 
-// --- Password reset route ---
+// --- Password reset (placeholder) ---
 router.post('/reset-password', async (req, res) => {
-  try {
-    const { username } = req.body;
-    // Example: generate reset token, send via Twilio SMS/email
-    // const resetToken = crypto.randomBytes(20).toString('hex');
-    // await sendResetToken(username, resetToken);
-
-    res.json({ success: true, message: 'Password reset endpoint placeholder' });
-  } catch (err) {
-    console.error('Password reset error:', err);
-    res.status(500).json({ error: 'Failed to reset password' });
-  }
+  res.json({ success: true, message: 'Password reset endpoint placeholder' });
 });
 
 module.exports = router;
