@@ -1,4 +1,4 @@
-// server.js
+
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -6,18 +6,16 @@ const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
+const path = require('path');
 
+// Route modules
 const authRoutes = require('./routes/authRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const biometricRoutes = require('./routes/biometricRoutes');
 const matchRoutes = require('./routes/matchRoutes');
 const unlockRoutes = require('./routes/unlockImage');
 
-const path = require('path');
-
-
 const app = express();
-
 
 // Behind a proxy (Render), enable trust proxy so secure cookies work
 app.set('trust proxy', 1);
@@ -31,11 +29,13 @@ mongoose.connect(process.env.MONGO_URI)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Allow frontend origin (Netlify/Vercel/localhost) with credentials
 app.use(cors({
   origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
   credentials: true,
 }));
 
+// Security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -63,27 +63,23 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
     httpOnly: true,
     sameSite: 'none',
-    // Set domain if you need cross-subdomain cookies
-    // domain: '.yourdomain.com'
   },
 }));
 
-// Routes
-app.use('/auth', authRoutes);
-app.use('/images', imageRoutes);
-app.use('/biometric', biometricRoutes);
-app.use('/match', matchRoutes);
-app.use('/unlock', unlockRoutes);
+// ✅ Routes (these match client calls like /auth/signup)
+app.use('/auth', authRoutes);          // signup, login, logout
+app.use('/images', imageRoutes);       // image upload/view
+app.use('/biometric', biometricRoutes);// biometric unlock/settings
+app.use('/match', matchRoutes);        // match history
+app.use('/unlock', unlockRoutes);      // unlock images
 app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
-
-
-
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
