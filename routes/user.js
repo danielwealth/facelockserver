@@ -4,7 +4,6 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const User = require('../models/User');
-const { getFaceDescriptor } = require('../utils/faceApiUtils'); // helper for face-api.js
 
 const router = express.Router();
 
