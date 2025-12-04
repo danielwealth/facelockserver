@@ -14,6 +14,8 @@ const imageRoutes = require('./routes/imageRoutes');
 const biometricRoutes = require('./routes/biometricRoutes');
 const matchRoutes = require('./routes/matchRoutes');
 const unlockRoutes = require('./routes/unlockImage');
+const userRoutes = require('./routes/user');
+const authMiddleware = require('./middleware/auth');
 
 
 const app = express();
@@ -74,7 +76,8 @@ app.use('/biometric', biometricRoutes);// biometric unlock/settings
 app.use('/match', matchRoutes);        // match history
 app.use('/unlock', unlockRoutes);      // unlock images
 app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
-app.use('/user', require('./routes/user'));
+app.use(authMiddleware);
+app.use('/user', userRoutes);
 
 
 // Health check
