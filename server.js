@@ -15,6 +15,7 @@ const biometricRoutes = require('./routes/biometricRoutes');
 const matchRoutes = require('./routes/matchRoutes');
 const unlockRoutes = require('./routes/unlockImage');
 
+
 const app = express();
 
 // Behind a proxy (Render), enable trust proxy so secure cookies work
@@ -73,6 +74,8 @@ app.use('/biometric', biometricRoutes);// biometric unlock/settings
 app.use('/match', matchRoutes);        // match history
 app.use('/unlock', unlockRoutes);      // unlock images
 app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
+app.use('/user', require('./routes/user'));
+
 
 // Health check
 app.get('/health', (req, res) => {
