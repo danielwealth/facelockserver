@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 const path = require('path');
 
 // Route modules
-const authRoutes = require('./routes/authRoutes');
+const authRoutes = require('./routes/auth');
 const imageRoutes = require('./routes/imageRoutes');
 const biometricRoutes = require('./routes/biometricRoutes');
 const matchRoutes = require('./routes/matchRoutes');
