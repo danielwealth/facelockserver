@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const User = require('../models/User'); // your User.js model
 
-// --- Signup ---
+// --- Signup (defaults to user role) ---
 router.post('/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -12,11 +12,11 @@ router.post('/signup', async (req, res) => {
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'User already exists' });
 
-    const newUser = new User({ email, password });
+    const newUser = new User({ email, password, role: 'user' }); // ✅ default role
     await newUser.save();
 
     req.session.authenticated = true;
-    req.session.user = { id: newUser._id, email: newUser.email };
+    req.session.user = { id: newUser._id, email: newUser.email, role: newUser.role };
     req.session.key = crypto.randomBytes(32).toString('hex');
 
     res.json({ success: true, message: 'Signed up successfully', user: newUser.email });
@@ -26,7 +26,7 @@ router.post('/signup', async (req, res) => {
   }
 });
 
-// --- Login ---
+// --- Login (checks role) ---
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -37,10 +37,15 @@ router.post('/login', async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
     req.session.authenticated = true;
-    req.session.user = { id: user._id, email: user.email };
+    req.session.user = { id: user._id, email: user.email, role: user.role };
     req.session.key = crypto.randomBytes(32).toString('hex');
 
-    res.json({ success: true, message: 'Logged in successfully', user: user.email });
+    // ✅ Differentiate messages
+    if (user.role === 'admin') {
+      return res.json({ success: true, message: 'Admin logged in successfully', user: user.email });
+    } else {
+      return res.json({ success: true, message: 'User logged in successfully', user: user.email });
+    }
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Failed to log in' });
