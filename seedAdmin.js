@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 const User = require('./models/User');
 
-mongoose.connect('mongodb://localhost:27017/yourdb');
+mongoose.connect(process.env.MONGO_URI);
 
 async function createAdmin() {
   const adminExists = await User.findOne({ role: 'admin' });
