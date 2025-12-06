@@ -2,23 +2,24 @@
 const mongoose = require('mongoose');
 const User = require('./models/User');
 
-mongoose.connect(process.env.MONGO_URI);
+mongoose.connect('mongodb://localhost:27017/yourdb');
 
 async function createAdmin() {
-  const adminExists = await User.findOne({ role: 'admin' });
-  if (adminExists) {
+  const existing = await User.findOne({ email: 'admin@example.com' });
+  if (existing) {
     console.log('Admin already exists');
-    return;
+    return mongoose.disconnect();
   }
 
   const admin = new User({
-    email: 'danwealth80@gmail.com',
-    password: 'sunnydan3924', // will be hashed automatically
+    email: 'admin@example.com',
+    password: 'securepassword123', // plain text here, will be hashed automatically
     role: 'admin'
   });
 
   await admin.save();
   console.log('✅ Admin created successfully');
+  mongoose.disconnect();
 }
 
-createAdmin().then(() => mongoose.disconnect());
+createAdmin();
