@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const User = require('../models/User');
 const path = require('path');
-const upload = require('../middleware/upload'); // Multer middleware
+const upload = require('../middleware/upload');
 
 // --- Signup (user only) ---
 router.post('/signup', async (req, res) => {
@@ -95,12 +95,32 @@ router.post('/upload-profile-image', upload.single('image'), async (req, res) =>
   }
 });
 
-// --- Serve Images Securely ---
-router.get('/uploads/:filename', (req, res) => {
-  if (!req.session || !req.session.user) {
-    return res.status(403).send('Forbidden');
+// --- Serve Images Securely with Role Protection ---
+router.get('/uploads/:filename', async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(403).send('Forbidden');
+    }
+
+    const user = await User.findOne({ profileImage: `/uploads/${req.params.filename}` });
+    if (!user) return res.status(404).send('Image not found');
+
+    // ✅ Role-based protection
+    if (req.session.user.role === 'admin') {
+      // Admins can view any image
+      return res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
+    }
+
+    if (req.session.user.id.toString() !== user._id.toString()) {
+      // Normal users can only view their own image
+      return res.status(403).send('Forbidden');
+    }
+
+    res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
+  } catch (err) {
+    console.error('Image serve error:', err);
+    res.status(500).send('Failed to serve image');
   }
-  res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
 });
 
 module.exports = router;
