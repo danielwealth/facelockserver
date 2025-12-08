@@ -1,2 +1,2 @@
-- Stage and commit:
-  ```bat
+# This file ensures the uploads folder is tracked by Git.
+# Do not delete. Actual uploaded images are ignored via .gitignore.
