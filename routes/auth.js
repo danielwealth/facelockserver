@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const User = require('../models/User');
+const path = require('path');
+const upload = require('../middleware/upload'); // Multer middleware
 
 // --- Signup (user only) ---
 router.post('/signup', async (req, res) => {
@@ -74,6 +76,31 @@ router.post('/admin/login', async (req, res) => {
     console.error('Admin login error:', err);
     res.status(500).json({ error: 'Failed to log in as admin' });
   }
+});
+
+// --- Upload Profile Image (locked) ---
+router.post('/upload-profile-image', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const imagePath = `/uploads/${req.file.filename}`;
+    await User.findByIdAndUpdate(req.session.user.id, { profileImage: imagePath });
+
+    res.json({ success: true, profileImage: imagePath });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+// --- Serve Images Securely ---
+router.get('/uploads/:filename', (req, res) => {
+  if (!req.session || !req.session.user) {
+    return res.status(403).send('Forbidden');
+  }
+  res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
 });
 
 module.exports = router;
