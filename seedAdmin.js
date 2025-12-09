@@ -5,14 +5,14 @@ async function createAdmin() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
 
-    const existing = await User.findOne({ email: 'danwealh80@gmail.com' });
+    const existing = await User.findOne({ email: 'ohimaidaniel@yahoo.com' });
     if (existing) {
       console.log('Admin already exists');
       return mongoose.disconnect();
     }
 
     const admin = new User({
-      email: 'danwealth80@gmail.com',
+      email: 'ohimaidaniel@yahoo.com',
       password: 'english3924', // will be hashed if your User model has a pre-save hook
       role: 'admin'
     });
