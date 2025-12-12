@@ -1,30 +1,47 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 const UserSchema = new mongoose.Schema({
-  email: { type: String, unique: true, required: true, trim: true, lowercase: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
-
-  // ✅ Add image support
-  profileImage: { type: String, default: '' }, 
-  // This will store a URL or file path to the image
-
-  resetToken: { type: String },
-  resetTokenExpiry: { type: Date },
-  createdAt: { type: Date, default: Date.now }
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
+  profileImage: {
+    type: String,
+  },
+  keyHash: {
+    type: String, // ✅ hashed secret key
+  },
+  faceDescriptor: {
+    type: [Number], // ✅ 128-dim descriptor array
+  },
 });
 
-// ✅ Hash password before saving
+// --- Password hashing before save ---
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
-  next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
-// ✅ Compare candidate password with stored hash
-UserSchema.methods.comparePassword = async function (candidate) {
-  return bcrypt.compare(candidate, this.password);
+// --- Compare password method ---
+UserSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 module.exports = mongoose.model('User', UserSchema);
