@@ -68,6 +68,10 @@ app.use(session({
     sameSite: 'none',
   },
 }));
+// Serve static files from the uploads folder
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 
 // ✅ Routes (these match client calls like /auth/signup)
 app.use('/auth', authRoutes);          // signup, login, logout
