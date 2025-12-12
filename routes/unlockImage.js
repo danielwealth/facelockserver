@@ -16,11 +16,8 @@ router.post('/unlock-image', async (req, res) => {
     }
 
     const { role, id } = req.session.user;
-
-    // Parse descriptor from JSON string
     const newDescriptor = JSON.parse(descriptor);
 
-    // Admins can search all users, normal users only themselves
     let users;
     if (role === 'admin') {
       users = await User.find({ faceDescriptor: { $exists: true } });
@@ -31,7 +28,7 @@ router.post('/unlock-image', async (req, res) => {
     let matchedUser = null;
     for (const u of users) {
       const distance = euclideanDistance(newDescriptor, u.faceDescriptor);
-      if (distance < 0.6) { // threshold for match
+      if (distance < 0.6) {
         matchedUser = u;
         break;
       }
@@ -41,13 +38,11 @@ router.post('/unlock-image', async (req, res) => {
       return res.status(401).json({ status: 'unauthorized', reason: 'Face not recognized' });
     }
 
-    // Verify the secret key
     const validKey = await bcrypt.compare(key, matchedUser.keyHash);
     if (!validKey) {
       return res.status(401).json({ status: 'unauthorized', reason: 'Invalid key' });
     }
 
-    // Authorized: return unlocked image path
     res.json({
       status: 'authorized',
       role,
@@ -60,7 +55,31 @@ router.post('/unlock-image', async (req, res) => {
   }
 });
 
-// Helper function for descriptor comparison
+// --- View Unlocked Images ---
+router.get('/unlocked-images', async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(403).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const { role, id } = req.session.user;
+    let users;
+
+    if (role === 'admin') {
+      users = await User.find({ profileImage: { $exists: true } });
+    } else {
+      users = await User.find({ _id: id, profileImage: { $exists: true } });
+    }
+
+    const images = users.map(u => u.profileImage);
+    res.json({ success: true, role, images });
+  } catch (err) {
+    console.error('Error fetching unlocked images:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Helper function
 function euclideanDistance(d1, d2) {
   let sum = 0;
   for (let i = 0; i < d1.length; i++) {
