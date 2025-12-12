@@ -20,18 +20,18 @@ const UserSchema = new mongoose.Schema({
     type: String,
   },
   keyHash: {
-    type: String, // ✅ hashed secret key
+    type: String, // hashed secret key for image lock
   },
   faceDescriptor: {
-    type: [Number], // ✅ 128-dim descriptor array
+    type: [Number], // biometric descriptor array
   },
-});
+}, { timestamps: true });
 
 // --- Password hashing before save ---
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   try {
-    const salt = await bcrypt.genSalt(12);
+    const salt = await bcrypt.genSalt(12); // ✅ match old cost factor
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (err) {
