@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -17,9 +16,9 @@ const unlockRoutes = require('./routes/unlockImage');
 const userRoutes = require('./routes/user');
 const imageLockRoutes = require('./routes/imageLock');
 
-
 const app = express();
 
+// ✅ Serve uploads with CORP header
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
@@ -73,10 +72,6 @@ app.use(session({
     sameSite: 'none',
   },
 }));
-// Serve static files from the uploads folder
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-
 
 // ✅ Routes (these match client calls like /auth/signup)
 app.use('/auth', authRoutes);          // signup, login, logout
@@ -86,8 +81,7 @@ app.use('/match', matchRoutes);        // match history
 app.use('/unlock', unlockRoutes);      // unlock images
 app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
 app.use('/user', userRoutes);
-app.use('/images', imageLockRoutes); // image lock/verify
-
+app.use('/images', imageLockRoutes);   // image lock/verify
 
 // Health check
 app.get('/health', (req, res) => {
