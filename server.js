@@ -20,6 +20,11 @@ const imageLockRoutes = require('./routes/imageLock');
 
 const app = express();
 
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
+
 // Behind a proxy (Render), enable trust proxy so secure cookies work
 app.set('trust proxy', 1);
 
