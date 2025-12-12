@@ -46,7 +46,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "https:"],
       fontSrc: ["'self'", "https:"],
-      connectSrc: ["'self'", "https:"],
+      connectSrc: ["'self'", "https:", "http://localhost:3000", process.env.FRONTEND_ORIGIN],
     },
   },
 }));
