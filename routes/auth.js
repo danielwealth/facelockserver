@@ -17,7 +17,7 @@ router.post('/upload-profile-image', upload.single('image'), async (req, res) =>
       return res.status(400).json({ error: 'Key and descriptor required' });
     }
 
-    const keyHash = await bcrypt.hash(key, 10);
+    const keyHash = await bcrypt.hash(key, 12);
     const imagePath = `/uploads/${req.file.filename}`;
 
     await User.findByIdAndUpdate(req.session.user.id, {
