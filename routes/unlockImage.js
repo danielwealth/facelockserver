@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const path = require('path');
 
 // --- Unlock Image ---
 router.post('/unlock-image', async (req, res) => {
@@ -12,11 +11,22 @@ router.post('/unlock-image', async (req, res) => {
       return res.status(400).json({ error: 'Key and descriptor required' });
     }
 
+    if (!req.session || !req.session.user) {
+      return res.status(403).json({ error: 'Unauthorized: no active session' });
+    }
+
+    const { role, id } = req.session.user;
+
     // Parse descriptor from JSON string
     const newDescriptor = JSON.parse(descriptor);
 
-    // Find all users with stored descriptors
-    const users = await User.find({ faceDescriptor: { $exists: true } });
+    // Admins can search all users, normal users only themselves
+    let users;
+    if (role === 'admin') {
+      users = await User.find({ faceDescriptor: { $exists: true } });
+    } else {
+      users = await User.find({ _id: id, faceDescriptor: { $exists: true } });
+    }
 
     let matchedUser = null;
     for (const u of users) {
@@ -40,6 +50,7 @@ router.post('/unlock-image', async (req, res) => {
     // Authorized: return unlocked image path
     res.json({
       status: 'authorized',
+      role,
       imagePath: matchedUser.profileImage,
       userId: matchedUser._id,
     });
