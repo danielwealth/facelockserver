@@ -17,7 +17,7 @@ router.post('/upload-profile-image', upload.single('image'), async (req, res) =>
       return res.status(400).json({ error: 'Key and descriptor required' });
     }
 
-    const keyHash = await bcryptjs.hash(key, 10);
+    const keyHash = await bcrypt.hash(key, 10);
     const imagePath = `/uploads/${req.file.filename}`;
 
     await User.findByIdAndUpdate(req.session.user.id, {
@@ -55,7 +55,7 @@ router.post('/verify-image', async (req, res) => {
       return res.status(401).json({ status: 'unauthorized', reason: 'Face not recognized' });
     }
 
-    const validKey = await bcryptjs.compare(key, matchedUser.keyHash);
+    const validKey = await bcrypt.compare(key, matchedUser.keyHash);
     if (!validKey) {
       return res.status(401).json({ status: 'unauthorized', reason: 'Invalid key' });
     }
