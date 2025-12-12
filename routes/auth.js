@@ -1,30 +1,97 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const path = require('path');
 const upload = require('../middleware/upload');
 
-// --- Upload Profile Image (locked with key + descriptor) ---
+// --- Signup (user only) ---
+router.post('/signup', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ error: 'User already exists' });
+    }
+
+    const newUser = new User({ email, password, role: 'user' });
+    await newUser.save(); // password hashed in User.js pre-save hook
+
+    req.session.authenticated = true;
+    req.session.user = { id: newUser._id, email: newUser.email, role: newUser.role };
+    req.session.key = crypto.randomBytes(32).toString('hex');
+
+    res.json({ success: true, message: 'Signed up successfully', user: newUser.email });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Failed to sign up' });
+  }
+});
+
+// --- User Login ---
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const match = await user.comparePassword(password);
+    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+
+    if (user.role !== 'user') {
+      return res.status(403).json({ error: 'Not authorized as user' });
+    }
+
+    req.session.authenticated = true;
+    req.session.user = { id: user._id, email: user.email, role: user.role };
+    req.session.key = crypto.randomBytes(32).toString('hex');
+
+    res.json({ success: true, message: 'User logged in successfully', user: user.email });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Failed to log in' });
+  }
+});
+
+// --- Admin Login ---
+router.post('/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const admin = await User.findOne({ email });
+    if (!admin) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const match = await admin.comparePassword(password);
+    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+
+    if (admin.role !== 'admin') {
+      return res.status(403).json({ error: 'Not authorized as admin' });
+    }
+
+    req.session.authenticated = true;
+    req.session.user = { id: admin._id, email: admin.email, role: admin.role };
+    req.session.key = crypto.randomBytes(32).toString('hex');
+
+    res.json({ success: true, message: 'Admin logged in successfully', user: admin.email });
+  } catch (err) {
+    console.error('Admin login error:', err);
+    res.status(500).json({ error: 'Failed to log in as admin' });
+  }
+});
+
+// --- Upload Profile Image (basic, tied to session user) ---
 router.post('/upload-profile-image', upload.single('image'), async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { key, descriptor } = req.body;
-    if (!key || !descriptor) {
-      return res.status(400).json({ error: 'Key and descriptor required' });
-    }
-
-    const keyHash = await bcrypt.hash(key, 12);
     const imagePath = `/uploads/${req.file.filename}`;
-
-    await User.findByIdAndUpdate(req.session.user.id, {
-      profileImage: imagePath,
-      keyHash,
-      faceDescriptor: JSON.parse(descriptor),
-    });
+    await User.findByIdAndUpdate(req.session.user.id, { profileImage: imagePath });
 
     res.json({ success: true, profileImage: imagePath });
   } catch (err) {
@@ -33,47 +100,31 @@ router.post('/upload-profile-image', upload.single('image'), async (req, res) =>
   }
 });
 
-// --- Verify Image Usage ---
-router.post('/verify-image', async (req, res) => {
+// --- Serve Images Securely with Role Protection ---
+router.get('/uploads/:filename', async (req, res) => {
   try {
-    const { key, descriptor } = req.body;
-    if (!key || !descriptor) return res.status(400).json({ error: 'Key and descriptor required' });
-
-    const newDescriptor = JSON.parse(descriptor);
-    const users = await User.find({ faceDescriptor: { $exists: true } });
-
-    let matchedUser = null;
-    for (const u of users) {
-      const distance = euclideanDistance(newDescriptor, u.faceDescriptor);
-      if (distance < 0.6) { // threshold for match
-        matchedUser = u;
-        break;
-      }
+    if (!req.session || !req.session.user) {
+      return res.status(403).send('Forbidden');
     }
 
-    if (!matchedUser) {
-      return res.status(401).json({ status: 'unauthorized', reason: 'Face not recognized' });
+    const user = await User.findOne({ profileImage: `/uploads/${req.params.filename}` });
+    if (!user) return res.status(404).send('Image not found');
+
+    // Admins can view any image
+    if (req.session.user.role === 'admin') {
+      return res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
     }
 
-    const validKey = await bcrypt.compare(key, matchedUser.keyHash);
-    if (!validKey) {
-      return res.status(401).json({ status: 'unauthorized', reason: 'Invalid key' });
+    // Normal users can only view their own image
+    if (req.session.user.id.toString() !== user._id.toString()) {
+      return res.status(403).send('Forbidden');
     }
 
-    res.json({ status: 'authorized', userId: matchedUser._id });
+    res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
   } catch (err) {
-    console.error('Verify error:', err);
-    res.status(500).json({ error: 'Failed to verify image' });
+    console.error('Image serve error:', err);
+    res.status(500).send('Failed to serve image');
   }
 });
-
-// Helper function for descriptor comparison
-function euclideanDistance(d1, d2) {
-  let sum = 0;
-  for (let i = 0; i < d1.length; i++) {
-    sum += Math.pow(d1[i] - d2[i], 2);
-  }
-  return Math.sqrt(sum);
-}
 
 module.exports = router;
