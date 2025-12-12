@@ -17,12 +17,17 @@ const userRoutes = require('./routes/user');
 const imageLockRoutes = require('./routes/imageLock');
 
 const app = express();
-
 // ✅ Serve uploads with CORP header
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 }, express.static(path.join(__dirname, 'uploads')));
+
+// ✅ Serve unlocked with CORP header
+app.use('/unlocked', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'unlocked')));
 
 // Behind a proxy (Render), enable trust proxy so secure cookies work
 app.set('trust proxy', 1);
