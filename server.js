@@ -15,6 +15,7 @@ const biometricRoutes = require('./routes/biometricRoutes');
 const matchRoutes = require('./routes/matchRoutes');
 const unlockRoutes = require('./routes/unlockImage');
 const userRoutes = require('./routes/user');
+const imageLockRoutes = require('./routes/imageLock');
 
 
 const app = express();
@@ -76,6 +77,7 @@ app.use('/match', matchRoutes);        // match history
 app.use('/unlock', unlockRoutes);      // unlock images
 app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
 app.use('/user', userRoutes);
+app.use('/images', imageLockRoutes); // image lock/verify
 
 
 // Health check
