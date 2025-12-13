@@ -8,6 +8,7 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
+// Generate pre-signed PUT URL for upload
 router.post('/get-upload-url', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
@@ -19,7 +20,8 @@ router.post('/get-upload-url', async (req, res) => {
 
     const key = `${userId}/${Date.now()}-${filename}`;
 
-    const url = await s3.getSignedUrlPromise('putObject', {
+    // Pre-signed PUT URL for uploading
+    const uploadUrl = await s3.getSignedUrlPromise('putObject', {
       Bucket: process.env.AWS_BUCKET_NAME,
       Key: key,
       ContentType: filetype,
@@ -27,7 +29,14 @@ router.post('/get-upload-url', async (req, res) => {
       ACL: 'private',
     });
 
-    res.json({ uploadUrl: url, key });
+    // Pre-signed GET URL for immediate preview
+    const viewUrl = await s3.getSignedUrlPromise('getObject', {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key,
+      Expires: 300, // 5 minutes
+    });
+
+    res.json({ uploadUrl, key, viewUrl });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to generate upload URL' });
