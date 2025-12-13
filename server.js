@@ -15,6 +15,7 @@ const matchRoutes = require('./routes/matchRoutes');
 const unlockRoutes = require('./routes/unlockImage');
 const userRoutes = require('./routes/user');
 const imageLockRoutes = require('./routes/imageLock');
+const s3UploadRoutes = require('./routes/s3Upload');
 
 const app = express();
 // ✅ Serve uploads with CORP header
@@ -87,6 +88,7 @@ app.use('/unlock', unlockRoutes);      // unlock images
 app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
 app.use('/user', userRoutes);
 app.use('/images', imageLockRoutes);   // image lock/verify
+app.use('/s3', s3UploadRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
