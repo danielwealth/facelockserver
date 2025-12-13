@@ -1,91 +1,48 @@
 const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcryptjs');
+const AWS = require('aws-sdk');
+const bcrypt = require('bcrypt');   // ✅ import bcrypt
 const User = require('../models/User');
+const router = express.Router();
 
-// --- Unlock Image ---
-router.post('/unlock-image', async (req, res) => {
-  try {
-    const { key, descriptor } = req.body;
-    if (!key || !descriptor) {
-      return res.status(400).json({ error: 'Key and descriptor required' });
-    }
-
-    if (!req.session || !req.session.user) {
-      return res.status(403).json({ error: 'Unauthorized: no active session' });
-    }
-
-    const { role, id } = req.session.user;
-    const newDescriptor = JSON.parse(descriptor);
-
-    let users;
-    if (role === 'admin') {
-      users = await User.find({ faceDescriptor: { $exists: true } });
-    } else {
-      users = await User.find({ _id: id, faceDescriptor: { $exists: true } });
-    }
-
-    let matchedUser = null;
-    for (const u of users) {
-      const distance = euclideanDistance(newDescriptor, u.faceDescriptor);
-      if (distance < 0.6) {
-        matchedUser = u;
-        break;
-      }
-    }
-
-    if (!matchedUser) {
-      return res.status(401).json({ status: 'unauthorized', reason: 'Face not recognized' });
-    }
-
-    const validKey = await bcrypt.compare(key, matchedUser.keyHash);
-    if (!validKey) {
-      return res.status(401).json({ status: 'unauthorized', reason: 'Invalid key' });
-    }
-
-    res.json({
-      status: 'authorized',
-      role,
-      imagePath: matchedUser.profileImage,
-      userId: matchedUser._id,
-    });
-  } catch (err) {
-    console.error('Unlock error:', err);
-    res.status(500).json({ error: 'Failed to unlock image' });
-  }
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
 });
 
-// --- View Unlocked Images ---
-router.get('/unlocked-images', async (req, res) => {
+// Unlock route: validate secret key + return signed GET URL
+router.post('/unlocked-image', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
       return res.status(403).json({ success: false, error: 'Unauthorized' });
     }
 
-    const { role, id } = req.session.user;
-    let users;
+    const { _id } = req.session.user;
+    const { key } = req.body; // secret key entered by user
 
-    if (role === 'admin') {
-      users = await User.find({ profileImage: { $exists: true } });
-    } else {
-      users = await User.find({ _id: id, profileImage: { $exists: true } });
+    const user = await User.findById(_id);
+    if (!user || !user.profileImage) {
+      return res.status(404).json({ success: false, error: 'No profile image found' });
     }
 
-    const images = users.map(u => u.profileImage);
-    res.json({ success: true, role, images });
+    // ✅ Compare entered key with hashed key in DB
+    const match = await bcrypt.compare(key, user.secretKey);
+    if (!match) {
+      return res.status(401).json({ success: false, error: 'Invalid secret key' });
+    }
+
+    // Generate signed GET URL for the cover image
+    const signedUrl = s3.getSignedUrl('getObject', {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: user.profileImage,
+      Expires: 300, // 5 minutes
+    });
+
+    res.json({ success: true, image: signedUrl });
   } catch (err) {
-    console.error('Error fetching unlocked images:', err);
+    console.error('Error unlocking image:', err);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
-
-// Helper function
-function euclideanDistance(d1, d2) {
-  let sum = 0;
-  for (let i = 0; i < d1.length; i++) {
-    sum += Math.pow(d1[i] - d2[i], 2);
-  }
-  return Math.sqrt(sum);
-}
 
 module.exports = router;
