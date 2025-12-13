@@ -19,11 +19,22 @@ const UserSchema = new mongoose.Schema({
   profileImage: {
     type: String,
   },
-  keyHash: {
-    type: String, // hashed secret key for image lock
+  secretKey: {
+    type: String,
+    required: true,
   },
-  faceDescriptor: {
-    type: [Number], // biometric descriptor array
+   faceDescriptor: {
+    type: [Number],
+    required: true,
+  },
+  profileImage: {
+    type: String,
+    required: true,
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
   },
 }, { timestamps: true });
 
