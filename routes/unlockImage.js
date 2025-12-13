@@ -1,6 +1,6 @@
 const express = require('express');
 const AWS = require('aws-sdk');
-const bcrypt = require('bcrypt');   // ✅ import bcrypt
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const router = express.Router();
 
@@ -10,7 +10,7 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-// Unlock route: validate secret key + return signed GET URL
+// Unlock route: validate secret key only
 router.post('/unlocked-image', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
