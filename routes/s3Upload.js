@@ -15,7 +15,7 @@ router.post('/get-upload-url', async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const userId = req.session.user._id;
+    const userId = req.session?.user?._id || 'anonymous';
     const { filename, filetype } = req.body;
 
     const key = `${userId}/${Date.now()}-${filename}`;
