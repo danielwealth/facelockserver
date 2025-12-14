@@ -3,8 +3,14 @@ const router = express.Router();
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const path = require('path');
-const upload = require('../middleware/upload');
+const AWS = require('aws-sdk');
+
+// Configure S3 client
+const s3 = new AWS.S3({
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
 
 // --- Signup (user only) ---
 router.post('/signup', async (req, res) => {
@@ -20,7 +26,7 @@ router.post('/signup', async (req, res) => {
     }
 
     const newUser = new User({ email, password, role: 'user' });
-    await newUser.save(); // password hashed in User.js pre-save hook
+    await newUser.save();
 
     req.session.authenticated = true;
     req.session.user = { id: newUser._id, email: newUser.email, role: newUser.role };
@@ -83,47 +89,72 @@ router.post('/admin/login', async (req, res) => {
   }
 });
 
-// --- Upload Profile Image (basic, tied to session user) ---
-router.post('/upload-profile-image', upload.single('image'), async (req, res) => {
+// --- Generate Pre-Signed URL for Upload ---
+router.post('/get-upload-url', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const imagePath = `/uploads/${req.file.filename}`;
-    await User.findByIdAndUpdate(req.session.user.id, { profileImage: imagePath });
+    const { filename, filetype } = req.body;
+    const userId = req.session.user.id;
+    const key = `${userId}/${Date.now()}-${filename}`;
 
-    res.json({ success: true, profileImage: imagePath });
+    const uploadUrl = await s3.getSignedUrlPromise('putObject', {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: key,
+      ContentType: filetype,
+      Expires: 300,
+      ACL: 'private',
+    });
+
+    res.json({ uploadUrl, key });
   } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ error: 'Failed to upload image' });
+    console.error('Presigned URL error:', err);
+    res.status(500).json({ error: 'Failed to generate upload URL' });
   }
 });
 
-// --- Serve Images Securely with Role Protection ---
-router.get('/uploads/:filename', async (req, res) => {
+// --- Save Profile Image Key ---
+router.post('/save-profile-image', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
-      return res.status(403).send('Forbidden');
+      return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const user = await User.findOne({ profileImage: `/uploads/${req.params.filename}` });
-    if (!user) return res.status(404).send('Image not found');
+    const { key } = req.body;
+    await User.findByIdAndUpdate(req.session.user.id, { profileImage: key });
 
-    // Admins can view any image
-    if (req.session.user.role === 'admin') {
-      return res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
+    res.json({ success: true, profileImage: key });
+  } catch (err) {
+    console.error('Save image error:', err);
+    res.status(500).json({ error: 'Failed to save profile image' });
+  }
+});
+
+// --- Serve Images Securely (via pre-signed GET URL) ---
+router.get('/profile-image/:userId', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user || !user.profileImage) {
+      return res.status(404).json({ error: 'Image not found' });
     }
 
-    // Normal users can only view their own image
-    if (req.session.user.id.toString() !== user._id.toString()) {
-      return res.status(403).send('Forbidden');
+    // Only allow admins or the user themselves
+    if (req.session.user.role !== 'admin' && req.session.user.id.toString() !== user._id.toString()) {
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
-    res.sendFile(path.join(__dirname, '../uploads', req.params.filename));
+    const viewUrl = await s3.getSignedUrlPromise('getObject', {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: user.profileImage,
+      Expires: 300,
+    });
+
+    res.json({ url: viewUrl });
   } catch (err) {
     console.error('Image serve error:', err);
-    res.status(500).send('Failed to serve image');
+    res.status(500).json({ error: 'Failed to serve image' });
   }
 });
 
