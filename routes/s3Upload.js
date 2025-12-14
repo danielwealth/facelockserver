@@ -26,7 +26,6 @@ router.post('/get-upload-url', async (req, res) => {
       Key: key,
       ContentType: filetype,
       Expires: 300, // 5 minutes
-      ACL: 'private',
     });
 
     // Pre-signed GET URL for immediate preview
