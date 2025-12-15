@@ -44,16 +44,31 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Middleware
 app.use(express.json());
-app.post('/save-profile-image', async (req, res) => {
+// server.js or routes.js
+app.post('/auth/save-profile-image', async (req, res) => {
   try {
-    const { userId, key } = req.body;
-    // key = "anonymous/1765760808810-high2.jpg"
+    const { userId, s3Key, descriptor, secretKey } = req.body;
+
+    // Construct full URL if you want
+    const fullUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { profileImage: key },
+      {
+        profileImage: fullUrl,   // or just s3Key if you prefer
+        faceDescriptor: descriptor,
+        secretKey: secretKey
+      },
       { new: true }
     );
+
+    res.json({ success: true, user: updatedUser });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to save profile image' });
+  }
+});
+
 app.use(express.urlencoded({ extended: true }));
 
 // Allow frontend origin (Netlify/Vercel/localhost) with credentials
