@@ -25,7 +25,14 @@ router.post('/signup', async (req, res) => {
       return res.status(409).json({ error: 'User already exists' });
     }
 
-    const newUser = new User({ email, password, role: 'user' });
+    const newUser = new User({
+  email,
+  password,
+  role: 'user',
+  secretKey: crypto.randomBytes(32).toString('hex'),
+  profileImage: '' // or a default image path
+});
+
     await newUser.save();
 
     req.session.authenticated = true;
