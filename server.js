@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const mongoose = require('mongoose');
 const path = require('path');
 
+
 // Route modules
 const authRoutes = require('./routes/auth');
 const imageRoutes = require('./routes/imageRoutes');
@@ -17,6 +18,7 @@ const userRoutes = require('./routes/user');
 const imageLockRoutes = require('./routes/imageLock');
 const s3UploadRoutes = require('./routes/s3Upload');
 const saveProfileImageRoutes = require('./routes/saveProfileImage');
+const User = require('./models/User');
 
 
 const app = express();
@@ -42,6 +44,16 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Middleware
 app.use(express.json());
+app.post('/save-profile-image', async (req, res) => {
+  try {
+    const { userId, key } = req.body;
+    // key = "anonymous/1765760808810-high2.jpg"
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { profileImage: key },
+      { new: true }
+    );
 app.use(express.urlencoded({ extended: true }));
 
 // Allow frontend origin (Netlify/Vercel/localhost) with credentials
