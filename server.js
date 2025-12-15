@@ -7,7 +7,6 @@ const helmet = require('helmet');
 const mongoose = require('mongoose');
 const path = require('path');
 
-
 // Route modules
 const authRoutes = require('./routes/auth');
 const imageRoutes = require('./routes/imageRoutes');
@@ -18,67 +17,29 @@ const userRoutes = require('./routes/user');
 const imageLockRoutes = require('./routes/imageLock');
 const s3UploadRoutes = require('./routes/s3Upload');
 const saveProfileImageRoutes = require('./routes/saveProfileImage');
-const User = require('./models/User');
-
 
 const app = express();
-// ✅ Serve uploads with CORP header
-app.use('/uploads', (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(path.join(__dirname, 'uploads')));
 
-// ✅ Serve unlocked with CORP header
-app.use('/unlocked', (req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(path.join(__dirname, 'unlocked')));
-
-// Behind a proxy (Render), enable trust proxy so secure cookies work
+// ✅ Trust proxy (needed for secure cookies on Render/Heroku)
 app.set('trust proxy', 1);
 
-// Connect to MongoDB Atlas
+// ✅ Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Connected to MongoDB Atlas"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
 
-// Middleware
+// ✅ Middleware order matters
 app.use(express.json());
-// server.js or routes.js
-app.post('/auth/save-profile-image', async (req, res) => {
-  try {
-    const { userId, s3Key, descriptor, secretKey } = req.body;
-
-    // Construct full URL if you want
-    const fullUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      {
-        profileImage: fullUrl,   // or just s3Key if you prefer
-        faceDescriptor: descriptor,
-        secretKey: secretKey
-      },
-      { new: true }
-    );
-
-    res.json({ success: true, user: updatedUser });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Failed to save profile image' });
-  }
-});
-
 app.use(express.urlencoded({ extended: true }));
 
-// Allow frontend origin (Netlify/Vercel/localhost) with credentials
+// ✅ CORS FIRST (before routes)
 app.use(cors({
   origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true,
+  credentials: true, // allow cookies/sessions
 }));
 
-// Security headers
+// ✅ Security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -87,12 +48,17 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "https:"],
       fontSrc: ["'self'", "https:"],
-      connectSrc: ["'self'", "https:", "http://localhost:3000", process.env.FRONTEND_ORIGIN],
+      connectSrc: [
+        "'self'",
+        "https:",
+        "http://localhost:3000",
+        process.env.FRONTEND_ORIGIN
+      ],
     },
   },
 }));
 
-// Sessions with Mongo store
+// ✅ Sessions with Mongo store
 app.use(session({
   secret: process.env.SESSION_SECRET || 'supersecret',
   resave: false,
@@ -109,24 +75,34 @@ app.use(session({
   },
 }));
 
-// ✅ Routes (these match client calls like /auth/signup)
-app.use('/auth', authRoutes);          // signup, login, logout
-app.use('/images', imageRoutes);       // image upload/view
-app.use('/biometric', biometricRoutes);// biometric unlock/settings
-app.use('/match', matchRoutes);        // match history
-app.use('/unlock', unlockRoutes);      // unlock images
-app.use('/unlocked', express.static(path.join(__dirname, 'unlocked')));
+// ✅ Static file serving with CORP header
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
+
+app.use('/unlocked', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'unlocked')));
+
+// ✅ Routes
+app.use('/auth', authRoutes);
+app.use('/images', imageRoutes);
+app.use('/biometric', biometricRoutes);
+app.use('/match', matchRoutes);
+app.use('/unlock', unlockRoutes);
 app.use('/user', userRoutes);
-app.use('/images', imageLockRoutes);   // image lock/verify
+app.use('/images', imageLockRoutes);
 app.use('/s3', s3UploadRoutes);
 app.use('/auth', saveProfileImageRoutes);
 
-// Health check
+// ✅ Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// Start server
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
