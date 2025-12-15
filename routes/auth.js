@@ -122,22 +122,43 @@ router.post('/get-upload-url', async (req, res) => {
   }
 });
 
-// --- Save Profile Image Key ---
 router.post('/save-profile-image', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { key } = req.body;
-    await User.findByIdAndUpdate(req.session.user.id, { profileImage: key });
+    const { s3Key, descriptor, key } = req.body; // key = passkey
+    const userId = req.session.user.id;
 
-    res.json({ success: true, profileImage: key });
+    if (!s3Key || !descriptor || !key) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Hash the passkey
+    const hashedKey = await bcrypt.hash(key, 12);
+
+    // Construct full S3 URL
+    const fullUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    user.secretKey = hashedKey;       // hashed passkey
+    user.faceDescriptor = descriptor; // biometric descriptor
+    user.profileImage = fullUrl;      // ✅ store S3 URL
+
+    await user.save();
+
+    res.json({ success: true, message: 'Profile image saved successfully', user });
   } catch (err) {
     console.error('Save image error:', err);
     res.status(500).json({ error: 'Failed to save profile image' });
   }
 });
+
 
 // --- Serve Images Securely (via pre-signed GET URL) ---
 router.get('/profile-image/:userId', async (req, res) => {
