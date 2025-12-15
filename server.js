@@ -74,6 +74,7 @@ app.use(express.urlencoded({ extended: true }));
 // Allow frontend origin (Netlify/Vercel/localhost) with credentials
 app.use(cors({
   origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
 
