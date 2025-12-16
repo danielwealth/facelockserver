@@ -191,12 +191,4 @@ router.get('/profile-image/:userId', async (req, res) => {
   }
 });
 
-
-    res.json({ url: viewUrl });
-  } catch (err) {
-    console.error('Image serve error:', err);
-    res.status(500).json({ error: 'Failed to serve image' });
-  }
-});
-
 module.exports = router;
