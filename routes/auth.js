@@ -161,6 +161,7 @@ router.post('/save-profile-image', async (req, res) => {
 
 
 // --- Serve Images Securely (via pre-signed GET URL) ---
+// --- Serve Profile Image Securely ---
 router.get('/profile-image/:userId', async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
@@ -169,15 +170,27 @@ router.get('/profile-image/:userId', async (req, res) => {
     }
 
     // Only allow admins or the user themselves
-    if (req.session.user.role !== 'admin' && req.session.user.id.toString() !== user._id.toString()) {
+    if (
+      req.session.user.role !== 'admin' &&
+      req.session.user.id.toString() !== user._id.toString()
+    ) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    // Generate presigned GET URL
     const viewUrl = await s3.getSignedUrlPromise('getObject', {
       Bucket: process.env.AWS_BUCKET_NAME,
-      Key: user.profileImage,
-      Expires: 300,
+      Key: user.profileImage, // stored S3 key
+      Expires: 300, // 5 minutes
     });
+
+    res.json({ url: viewUrl });
+  } catch (err) {
+    console.error('Image serve error:', err);
+    res.status(500).json({ error: 'Failed to serve image' });
+  }
+});
+
 
     res.json({ url: viewUrl });
   } catch (err) {
