@@ -15,7 +15,7 @@ const s3 = new AWS.S3({
 // --- Signup (user only) ---
 router.post('/signup', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
@@ -26,12 +26,12 @@ router.post('/signup', async (req, res) => {
     }
 
     const newUser = new User({
-  email,
-  password,
-  role: 'user',
-  secretKey: crypto.randomBytes(32).toString('hex'),
-  profileImage: '' // or a default image path
-});
+      email,
+      password,
+      role: 'user',
+      secretKey: '', // will be set later when profile image is saved
+      profileImage: ''
+    });
 
     await newUser.save();
 
@@ -49,7 +49,11 @@ router.post('/signup', async (req, res) => {
 // --- User Login ---
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -74,7 +78,11 @@ router.post('/login', async (req, res) => {
 // --- Admin Login ---
 router.post('/admin/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
     const admin = await User.findOne({ email });
     if (!admin) return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -103,7 +111,11 @@ router.post('/get-upload-url', async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { filename, filetype } = req.body;
+    const { filename, filetype } = req.body || {};
+    if (!filename || !filetype) {
+      return res.status(400).json({ error: 'Filename and filetype required' });
+    }
+
     const userId = req.session.user.id;
     const key = `${userId}/${Date.now()}-${filename}`;
 
@@ -122,20 +134,20 @@ router.post('/get-upload-url', async (req, res) => {
   }
 });
 
+// --- Save Profile Image ---
 router.post('/save-profile-image', async (req, res) => {
   try {
     if (!req.session || !req.session.user) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { s3Key, descriptor, key } = req.body; // key = passkey
+    const { s3Key, descriptor, key } = req.body || {};
     const userId = req.session.user.id;
 
     if (!s3Key || !descriptor || !key) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Hash the passkey
     const hashedKey = await bcrypt.hash(key, 12);
 
     const user = await User.findById(userId);
@@ -143,10 +155,9 @@ router.post('/save-profile-image', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // ✅ Store only the S3 object key
-    user.secretKey = hashedKey;       // hashed passkey
-    user.faceDescriptor = descriptor; // biometric descriptor
-    user.profileImage = s3Key;        // store just the key, not full URL
+    user.secretKey = hashedKey;
+    user.faceDescriptor = descriptor;
+    user.profileImage = s3Key; // ✅ store just the S3 object key
 
     await user.save();
 
@@ -157,33 +168,6 @@ router.post('/save-profile-image', async (req, res) => {
   }
 });
 
-
-    // Hash the passkey
-    const hashedKey = await bcrypt.hash(key, 12);
-
-    // Construct full S3 URL
-    const fullUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    user.secretKey = hashedKey;       // hashed passkey
-    user.faceDescriptor = descriptor; // biometric descriptor
-    user.profileImage = fullUrl;      // ✅ store S3 URL
-
-    await user.save();
-
-    res.json({ success: true, message: 'Profile image saved successfully', user });
-  } catch (err) {
-    console.error('Save image error:', err);
-    res.status(500).json({ error: 'Failed to save profile image' });
-  }
-});
-
-
-// --- Serve Images Securely (via pre-signed GET URL) ---
 // --- Serve Profile Image Securely ---
 router.get('/profile-image/:userId', async (req, res) => {
   try {
@@ -192,7 +176,6 @@ router.get('/profile-image/:userId', async (req, res) => {
       return res.status(404).json({ error: 'Image not found' });
     }
 
-    // Only allow admins or the user themselves
     if (
       req.session.user.role !== 'admin' &&
       req.session.user.id.toString() !== user._id.toString()
@@ -200,26 +183,10 @@ router.get('/profile-image/:userId', async (req, res) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // ✅ Generate presigned GET URL using stored key
     const viewUrl = await s3.getSignedUrlPromise('getObject', {
       Bucket: process.env.AWS_BUCKET_NAME,
-      Key: user.profileImage, // now just the key
-      Expires: 300, // 5 minutes
-    });
-
-    res.json({ url: viewUrl });
-  } catch (err) {
-    console.error('Image serve error:', err);
-    res.status(500).json({ error: 'Failed to serve image' });
-  }
-});
-
-
-    // Generate presigned GET URL
-    const viewUrl = await s3.getSignedUrlPromise('getObject', {
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: user.profileImage, // stored S3 key
-      Expires: 300, // 5 minutes
+      Key: user.profileImage, // stored as S3 key
+      Expires: 300,
     });
 
     res.json({ url: viewUrl });
