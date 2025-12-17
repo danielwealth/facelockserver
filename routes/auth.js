@@ -74,6 +74,29 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Failed to log in' });
   }
 });
+// --- user Logout ---
+router.post('/logout', (req, res) => {
+  try {
+    if (req.session) {
+      // Destroy the session to log the user out
+      req.session.destroy(err => {
+        if (err) {
+          console.error('Logout error:', err);
+          return res.status(500).json({ success: false, error: 'Failed to log out' });
+        }
+        // Clear cookie if you’re using one
+        res.clearCookie('connect.sid');
+        return res.json({ success: true, message: 'Logged out successfully' });
+      });
+    } else {
+      return res.status(200).json({ success: true, message: 'No active session' });
+    }
+  } catch (err) {
+    console.error('Logout exception:', err);
+    res.status(500).json({ success: false, error: 'Server error during logout' });
+  }
+});
+
 
 // --- Admin Login ---
 router.post('/admin/login', async (req, res) => {
