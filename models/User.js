@@ -9,14 +9,14 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: false,
+    required: true,
   },
   profileImage: {
     type: String,
   },
   secretKey: {
     type: String,
-    required: true,
+    required: false,
   },
    faceDescriptor: {
     type: [Number],
