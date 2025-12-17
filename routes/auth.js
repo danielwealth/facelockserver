@@ -183,9 +183,16 @@ router.get('/profile-image/:userId', async (req, res) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    // Defensive: strip prefix if old data still has full URL
+    let key = user.profileImage;
+    const prefix = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`;
+    if (key.startsWith(prefix)) {
+      key = key.replace(prefix, '');
+    }
+
     const viewUrl = await s3.getSignedUrlPromise('getObject', {
       Bucket: process.env.AWS_BUCKET_NAME,
-      Key: user.profileImage, // stored as S3 key
+      Key: key,
       Expires: 300,
     });
 
