@@ -138,6 +138,29 @@ router.post('/save-profile-image', async (req, res) => {
     // Hash the passkey
     const hashedKey = await bcrypt.hash(key, 12);
 
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // ✅ Store only the S3 object key
+    user.secretKey = hashedKey;       // hashed passkey
+    user.faceDescriptor = descriptor; // biometric descriptor
+    user.profileImage = s3Key;        // store just the key, not full URL
+
+    await user.save();
+
+    res.json({ success: true, message: 'Profile image saved successfully' });
+  } catch (err) {
+    console.error('Save image error:', err);
+    res.status(500).json({ error: 'Failed to save profile image' });
+  }
+});
+
+
+    // Hash the passkey
+    const hashedKey = await bcrypt.hash(key, 12);
+
     // Construct full S3 URL
     const fullUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
 
@@ -176,6 +199,21 @@ router.get('/profile-image/:userId', async (req, res) => {
     ) {
       return res.status(403).json({ error: 'Forbidden' });
     }
+
+    // ✅ Generate presigned GET URL using stored key
+    const viewUrl = await s3.getSignedUrlPromise('getObject', {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: user.profileImage, // now just the key
+      Expires: 300, // 5 minutes
+    });
+
+    res.json({ url: viewUrl });
+  } catch (err) {
+    console.error('Image serve error:', err);
+    res.status(500).json({ error: 'Failed to serve image' });
+  }
+});
+
 
     // Generate presigned GET URL
     const viewUrl = await s3.getSignedUrlPromise('getObject', {
