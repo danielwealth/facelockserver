@@ -190,6 +190,71 @@ router.post('/save-profile-image', async (req, res) => {
     res.status(500).json({ error: 'Failed to save profile image' });
   }
 });
+// --- Request Password Reset ---
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { phoneNumber } = req.body || {};
+    if (!phoneNumber) {
+      return res.status(400).json({ success: false, message: 'Phone number required' });
+    }
+
+    const user = await User.findOne({ phoneNumber });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store code temporarily on user (or in Redis)
+    user.resetCode = code;
+    user.resetCodeExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+
+    // TODO: send code via SMS or email
+    console.log(`Reset code for ${phoneNumber}: ${code}`);
+
+    res.json({ success: true, message: 'Reset code sent' });
+  } catch (err) {
+    console.error('Reset request error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// --- Verify Reset Code ---
+router.post('/verify-reset', async (req, res) => {
+  try {
+    const { phoneNumber, code, newPassword } = req.body || {};
+    if (!phoneNumber || !code || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Missing fields' });
+    }
+
+    const user = await User.findOne({ phoneNumber });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (
+      user.resetCode !== code ||
+      !user.resetCodeExpires ||
+      user.resetCodeExpires < Date.now()
+    ) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+    }
+
+    // Hash new password
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.resetCode = undefined;
+    user.resetCodeExpires = undefined;
+    await user.save();
+
+    res.json({ success: true, message: 'Password reset successful' });
+  } catch (err) {
+    console.error('Verify reset error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 
 // --- Serve Profile Image Securely ---
 router.get('/profile-image/:userId', async (req, res) => {
