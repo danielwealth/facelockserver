@@ -2,6 +2,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const { detectDeepfake } = require('../services/deepfake');
 const fs = require('fs');
 const User = require('../models/User');
 const { decryptData } = require('../services/encryption');
@@ -51,6 +52,14 @@ router.post('/verify-document', upload.single('document'), async (req, res) => {
       await user.save();
       return res.status(400).json({ success: false, error: 'No face detected in document' });
     }
+    const deepfakeResult = await detectDeepfake(req.file.path);
+
+if (deepfakeResult.verdict === 'fake' || (deepfakeResult.score && deepfakeResult.score > 0.7)) {
+  user.verificationStatus = 'rejected';
+  user.matchHistory.push({ result: 'deepfake detected', source: 'deepfake', createdAt: new Date() });
+  await user.save();
+  return res.status(401).json({ success: false, status: 'rejected', reason: 'Deepfake suspected' });
+}
 
     // Compare descriptors
     const storedDescriptor = decryptData(user.faceDescriptor);
