@@ -3,11 +3,14 @@ const express = require('express');
 const router = express.Router();
 const MatchHistory = require('../models/MatchHistory');
 
-// GET match history for authenticated user
-router.get('/match/history', async (req, res) => {
+/**
+ * GET /match/history
+ * Fetch match history for the authenticated user
+ */
+router.get('/history', async (req, res) => {
   try {
     // Ensure user is authenticated
-    if (!req.session || !req.session.authenticated || !req.session.user) {
+    if (!req.session?.authenticated || !req.session?.user) {
       return res.status(403).json({ success: false, error: 'Unauthorized' });
     }
 
@@ -21,10 +24,15 @@ router.get('/match/history', async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    if (!history || history.length === 0) {
+      return res.json({ success: true, history: [], message: 'No match history found' });
+    }
+
     // Format response for client
     const formatted = history.map(h => ({
       name: h.name || 'Unknown',
       timestamp: h.createdAt,
+      result: h.result || 'N/A',
     }));
 
     res.json({ success: true, history: formatted });
