@@ -1,23 +1,31 @@
-const AWS = require('aws-sdk');
+// server/routes/s3Upload.js
 const express = require('express');
 const router = express.Router();
+const AWS = require('aws-sdk');
 
+// Configure S3 client
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: process.env.AWS_REGION,
 });
 
-// Generate pre-signed PUT URL for upload
+/**
+ * POST /s3/get-upload-url
+ * Generate pre-signed PUT and GET URLs for file upload & preview
+ */
 router.post('/get-upload-url', async (req, res) => {
   try {
-    if (!req.session || !req.session.user) {
-      return res.status(403).json({ error: 'Unauthorized' });
+    if (!req.session?.user) {
+      return res.status(403).json({ success: false, error: 'Unauthorized' });
     }
 
-    const userId = req.session?.user?._id || 'anonymous';
-    const { filename, filetype } = req.body;
+    const { filename, filetype } = req.body || {};
+    if (!filename || !filetype) {
+      return res.status(400).json({ success: false, error: 'Filename and filetype are required' });
+    }
 
+    const userId = req.session.user.id || 'anonymous';
     const key = `${userId}/${Date.now()}-${filename}`;
 
     // Pre-signed PUT URL for uploading
@@ -26,6 +34,7 @@ router.post('/get-upload-url', async (req, res) => {
       Key: key,
       ContentType: filetype,
       Expires: 300, // 5 minutes
+      ACL: 'private',
     });
 
     // Pre-signed GET URL for immediate preview
@@ -35,10 +44,10 @@ router.post('/get-upload-url', async (req, res) => {
       Expires: 300, // 5 minutes
     });
 
-    res.json({ uploadUrl, key, viewUrl });
+    res.json({ success: true, uploadUrl, key, viewUrl });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to generate upload URL' });
+    console.error('S3 upload URL error:', err);
+    res.status(500).json({ success: false, error: 'Failed to generate upload URL' });
   }
 });
 
