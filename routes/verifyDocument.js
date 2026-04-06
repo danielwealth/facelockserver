@@ -5,11 +5,11 @@ const path = require('path');
 const fs = require('fs');
 const User = require('../models/User');
 const { decryptData } = require('../services/encryption');
-const { getFaceDescriptor } = require('../services/face'); // face embedding helper
-const { runOCR } = require('../services/ocr');             // OCR helper (Textract/Tesseract)
+const { getFaceDescriptor } = require('../services/face');
+const { runOCR } = require('../services/ocr');
 const router = express.Router();
 
-// Configure multer for temporary uploads
+// Multer setup for uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../uploads/docs');
@@ -20,26 +20,31 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-/**
- * POST /verify-document
- * Upload ID document, run OCR + face match, update verificationStatus
- */
 router.post('/verify-document', upload.single('document'), async (req, res) => {
   try {
-    if (!req.session?.user) {
-      return res.status(403).json({ success: false, error: 'Unauthorized' });
-    }
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No document uploaded' });
-    }
+    if (!req.session?.user) return res.status(403).json({ error: 'Unauthorized' });
+    if (!req.file) return res.status(400).json({ error: 'No document uploaded' });
 
     const user = await User.findById(req.session.user.id);
-    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Run OCR to extract text fields
+    // Run OCR
     const ocrResult = await runOCR(req.file.path);
+    const { parsed } = ocrResult; // { name, dob, idNumber }
 
-    // Extract face descriptor from document image
+    // Compare parsed fields against user record
+    let fieldMismatch = [];
+    if (parsed.name && user.name && parsed.name.toLowerCase() !== user.name.toLowerCase()) {
+      fieldMismatch.push('name');
+    }
+    if (parsed.dob && user.dob && parsed.dob !== user.dob) {
+      fieldMismatch.push('dob');
+    }
+    if (parsed.idNumber && user.idNumber && parsed.idNumber !== user.idNumber) {
+      fieldMismatch.push('idNumber');
+    }
+
+    // Extract face descriptor from document
     const docDescriptor = await getFaceDescriptor(req.file.path);
     if (!docDescriptor) {
       user.verificationStatus = 'rejected';
@@ -47,26 +52,28 @@ router.post('/verify-document', upload.single('document'), async (req, res) => {
       return res.status(400).json({ success: false, error: 'No face detected in document' });
     }
 
-    // Decrypt stored descriptor
-    const storedDescriptor = decryptData(user.faceDescriptor);
-
     // Compare descriptors
+    const storedDescriptor = decryptData(user.faceDescriptor);
     const distance = euclideanDistance(docDescriptor, storedDescriptor);
     const threshold = parseFloat(process.env.FACE_MATCH_THRESHOLD) || 0.6;
 
-    if (distance < threshold) {
+    if (distance < threshold && fieldMismatch.length === 0) {
       user.verificationStatus = 'verified';
       user.matchHistory.push({ result: 'document verified', source: 'verify-document', createdAt: new Date() });
       await user.save();
-      return res.json({ success: true, status: 'verified', ocrData: ocrResult });
+      return res.json({ success: true, status: 'verified', ocrData: parsed });
     } else {
       user.verificationStatus = 'rejected';
       await user.save();
-      return res.status(401).json({ success: false, status: 'rejected', reason: 'Face mismatch' });
+      return res.status(401).json({
+        success: false,
+        status: 'rejected',
+        reason: fieldMismatch.length ? `Field mismatch: ${fieldMismatch.join(', ')}` : 'Face mismatch',
+      });
     }
   } catch (err) {
     console.error('Document verification error:', err);
-    res.status(500).json({ success: false, error: 'Server error verifying document' });
+    res.status(500).json({ error: 'Server error verifying document' });
   }
 });
 
