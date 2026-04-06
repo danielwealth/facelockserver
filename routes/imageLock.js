@@ -1,20 +1,23 @@
+// server/routes/imageLock.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const path = require('path');
 const upload = require('../middleware/upload');
 
-// --- Upload Profile Image (locked with key + descriptor) ---
+/**
+ * POST /image-lock/upload-profile-image
+ * Upload a profile image, lock it with a key + face descriptor
+ */
 router.post('/upload-profile-image', upload.single('image'), async (req, res) => {
   try {
-    if (!req.session || !req.session.user) {
+    if (!req.session?.user) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { key, descriptor } = req.body;
-    if (!key || !descriptor) {
-      return res.status(400).json({ error: 'Key and descriptor required' });
+    const { key, descriptor } = req.body || {};
+    if (!key || !descriptor || !req.file) {
+      return res.status(400).json({ error: 'Key, descriptor, and image are required' });
     }
 
     const keyHash = await bcrypt.hash(key, 12);
@@ -26,18 +29,23 @@ router.post('/upload-profile-image', upload.single('image'), async (req, res) =>
       faceDescriptor: JSON.parse(descriptor),
     });
 
-    res.json({ success: true, profileImage: imagePath });
+    res.json({ success: true, message: 'Profile image uploaded successfully', profileImage: imagePath });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Failed to upload image' });
   }
 });
 
-// --- Verify Image Usage ---
+/**
+ * POST /image-lock/verify-image
+ * Verify if an uploaded image matches a stored descriptor and key
+ */
 router.post('/verify-image', async (req, res) => {
   try {
-    const { key, descriptor } = req.body;
-    if (!key || !descriptor) return res.status(400).json({ error: 'Key and descriptor required' });
+    const { key, descriptor } = req.body || {};
+    if (!key || !descriptor) {
+      return res.status(400).json({ error: 'Key and descriptor required' });
+    }
 
     const newDescriptor = JSON.parse(descriptor);
     const users = await User.find({ faceDescriptor: { $exists: true } });
@@ -67,13 +75,12 @@ router.post('/verify-image', async (req, res) => {
   }
 });
 
-// Helper function for descriptor comparison
+/**
+ * Helper: Euclidean distance between two descriptors
+ */
 function euclideanDistance(d1, d2) {
-  let sum = 0;
-  for (let i = 0; i < d1.length; i++) {
-    sum += Math.pow(d1[i] - d2[i], 2);
-  }
-  return Math.sqrt(sum);
+  if (!Array.isArray(d1) || !Array.isArray(d2) || d1.length !== d2.length) return Infinity;
+  return Math.sqrt(d1.reduce((sum, val, i) => sum + Math.pow(val - d2[i], 2), 0));
 }
 
 module.exports = router;
