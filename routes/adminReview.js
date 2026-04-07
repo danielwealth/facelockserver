@@ -3,23 +3,32 @@ const express = require('express');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const requireAdmin = require('../middleware/requireAdmin');
-const { logEvent, queryLogs } = require('../services/audit'); // optional audit integration
+const { logEvent, queryLogs } = require('../services/audit');
 const router = express.Router();
 
 /**
+ * Helper: parse and clamp integer query params
+ */
+function parseIntParam(value, fallback, min = -Infinity, max = Infinity) {
+  const n = parseInt(value, 10);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
+/**
  * GET /admin/pending-verifications
- * List users with verificationStatus = 'pending'
+ * Paginated list of users with verificationStatus = 'pending'
  * Query params: page (1-based), limit
  */
 router.get('/pending-verifications', requireAdmin, async (req, res) => {
   try {
-    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-    const limit = Math.min(Math.max(parseInt(req.query.limit || '25', 10), 1), 200);
+    const page = Math.max(parseIntParam(req.query.page, 1, 1), 1);
+    const limit = Math.min(parseIntParam(req.query.limit, 25, 1), 200);
     const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
       User.find({ verificationStatus: 'pending' })
-        .select('email name verificationStatus createdAt') // return only needed fields
+        .select('email name verificationStatus createdAt') // minimal fields
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -27,16 +36,10 @@ router.get('/pending-verifications', requireAdmin, async (req, res) => {
       User.countDocuments({ verificationStatus: 'pending' })
     ]);
 
-    res.json({
-      success: true,
-      page,
-      limit,
-      total,
-      users
-    });
+    return res.json({ success: true, page, limit, total, users });
   } catch (err) {
     console.error('Error fetching pending verifications:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -57,10 +60,10 @@ router.get('/user/:id', requireAdmin, async (req, res) => {
 
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
 
-    res.json({ success: true, user });
+    return res.json({ success: true, user });
   } catch (err) {
     console.error('Error fetching user for admin review:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -70,11 +73,11 @@ router.get('/user/:id', requireAdmin, async (req, res) => {
  * Body: { status: 'verified' | 'rejected', note?: string }
  */
 router.post('/verify-user/:id', requireAdmin, async (req, res) => {
-  try {
-    const admin = req.session?.user || req.user;
-    const { id } = req.params;
-    const { status, note } = req.body;
+  const admin = req.session?.user || req.user || null;
+  const { id } = req.params;
+  const { status, note } = req.body || {};
 
+  try {
     if (!['verified', 'rejected'].includes(status)) {
       return res.status(400).json({ success: false, error: 'Invalid status' });
     }
@@ -111,7 +114,7 @@ router.post('/verify-user/:id', requireAdmin, async (req, res) => {
 
     await user.save();
 
-    // Audit log the action (best-effort)
+    // Best-effort audit log
     await logEvent({
       actorId: admin?._id,
       actorEmail: admin?.email,
@@ -124,45 +127,45 @@ router.post('/verify-user/:id', requireAdmin, async (req, res) => {
       outcome: 'success'
     }).catch(() => null);
 
-    res.json({ success: true, message: `User ${status} successfully` });
+    return res.json({ success: true, message: `User ${status} successfully` });
   } catch (err) {
     console.error('Admin verification error:', err);
-    // attempt to log failure
-    const admin = req.session?.user || req.user;
+
     await logEvent({
       actorId: admin?._id,
       actorEmail: admin?.email,
       action: 'admin_verify_user_error',
       resourceType: 'User',
+      resourceId: mongoose.Types.ObjectId.isValid(id) ? id : null,
       details: { error: err.message },
       ip: req.ip,
       userAgent: req.get('User-Agent'),
       outcome: 'failure'
     }).catch(() => null);
 
-    res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
 /**
  * GET /admin/audit-logs
- * Optional: fetch audit logs (admins only)
+ * Fetch audit logs (admins only)
  * Query params: limit, actorId, action, outcome
  */
 router.get('/audit-logs', requireAdmin, async (req, res) => {
   try {
     const { actorId, action, outcome } = req.query;
-    const limit = Math.min(Math.max(parseInt(req.query.limit || '100', 10), 1), 1000);
+    const limit = Math.min(Math.max(parseIntParam(req.query.limit, 100, 1), 1), 1000);
     const filter = {};
     if (actorId) filter.actorId = actorId;
     if (action) filter.action = action;
     if (outcome) filter.outcome = outcome;
 
     const logs = await queryLogs(filter, { limit });
-    res.json({ success: true, logs });
+    return res.json({ success: true, logs });
   } catch (err) {
     console.error('Error fetching audit logs:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
+    return res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
