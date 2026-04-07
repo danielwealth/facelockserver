@@ -61,7 +61,27 @@ router.post('/login', async (req, res) => {
 });
 
 // --- Logout ---
+// --- Logout ---
 router.post('/logout', (req, res) => {
   if (!req.session) return res.json({ success: true, message: 'No active session' });
 
   req.session.destroy(err => {
+    if (err) {
+      console.error('Session destroy error:', err);
+      // best-effort: clear cookie if present
+      try {
+        res.clearCookie?.('connect.sid');
+      } catch (e) { /* ignore */ }
+      return res.status(500).json({ success: false, error: 'Failed to destroy session' });
+    }
+
+    // Optionally clear cookie and respond
+    try {
+      res.clearCookie?.('connect.sid');
+    } catch (e) { /* ignore */ }
+
+    return res.json({ success: true, message: 'Logged out' });
+  });
+});
+
+module.exports = router;
