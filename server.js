@@ -17,10 +17,7 @@ const userRoutes = require('./routes/user');
 const imageLockRoutes = require('./routes/imageLock');
 const s3UploadRoutes = require('./routes/s3Upload');
 const saveProfileImageRoutes = require('./routes/saveProfileImage');
-
-const app = express();
 // server/app.js (or wherever you configure middleware)
-const express = require('express');
 const { createRateLimiter } = require('./middleware/rateLimiter');
 const { logEvent } = require('./services/audit'); // optional
 
