@@ -19,6 +19,40 @@ const s3UploadRoutes = require('./routes/s3Upload');
 const saveProfileImageRoutes = require('./routes/saveProfileImage');
 
 const app = express();
+// server/app.js (or wherever you configure middleware)
+const express = require('express');
+const { createRateLimiter } = require('./middleware/rateLimiter');
+const { logEvent } = require('./services/audit'); // optional
+
+const app = express();
+
+// create limiter with defaults or override
+const limiter = createRateLimiter({
+  ipLimit: 100,
+  ipWindowSec: 60,
+  userLimit: 40,
+  userWindowSec: 60,
+  failureThreshold: 5,
+  lockoutSec: 900
+});
+
+// attach a small wrapper to expose audit logging to req
+app.use((req, res, next) => {
+  req.logEvent = async (payload) => {
+    try { await logEvent(payload); } catch (e) { /* ignore */ }
+  };
+  next();
+});
+
+// apply globally or to specific routes
+app.use(limiter);
+
+// Example: protect sensitive endpoint with extra checks
+app.post('/verify-identity', limiter, async (req, res) => {
+  // inside your route, on a failed verification attempt:
+  // await req.rateLimiter.recordFailure('invalid_key');
+});
+
 
 // ✅ Trust proxy (needed for secure cookies on Render/Heroku)
 app.set('trust proxy', 1);
