@@ -10,3 +10,4 @@ module.exports = function requireUser(req, res, next) {
 
   next(); // ✅ user is authenticated and has role "user"
 };
+module.exports = requireUser;
