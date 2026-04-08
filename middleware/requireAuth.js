@@ -42,3 +42,5 @@ module.exports = async function requireAuth(req, res, next) {
     return res.status(500).json({ success: false, error: 'Server error' });
   }
 };
+
+module.exports = requireAuth;
