@@ -20,6 +20,8 @@ const saveProfileImageRoutes = require('./routes/saveProfileImage');
 const verifyDocumentRoutes = require('./routes/verifyDocument');
 const verifyIdentityRoutes = require('./routes/verifyIdentity');
 const verifyImageRoutes = require('./routes/verifyImage');
+const faceRoutes = require('./routes/faceDescriptors');
+
 
 // server/app.js (or wherever you configure middleware)
 const { createRateLimiter } = require('./middleware/rateLimiter');
@@ -134,6 +136,8 @@ app.use('/auth', saveProfileImageRoutes);
 app.use('/verify', verifyDocumentRoutes);   // POST /verify/document
 app.use('/verify', verifyIdentityRoutes);   // POST /verify/identity
 app.use('/verify', verifyImageRoutes);   // POST /verify/image
+app.use('/face', faceRoutes);
+
 
 // ✅ Health check
 app.get('/health', (req, res) => {
