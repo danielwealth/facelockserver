@@ -22,7 +22,7 @@ function createSession(req, user) {
 }
 
 // --- Signup ---
-router.post('/signup', async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
