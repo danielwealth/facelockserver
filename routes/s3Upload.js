@@ -1,4 +1,19 @@
 // server/routes/s3Upload.js
+const express = require('express');
+const router = express.Router();   // ✅ define router
+const AWS = require('aws-sdk');
+
+// Configure S3 client
+const s3 = new AWS.S3({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+});
+
+/**
+ * POST /s3/get-upload-url
+ * Generate pre-signed PUT and GET URLs for file upload & preview
+ */
 router.post('/get-upload-url', async (req, res) => {
   try {
     if (!req.session?.user) {
@@ -11,7 +26,7 @@ router.post('/get-upload-url', async (req, res) => {
     }
 
     const userId = req.session.user.id || 'anonymous';
-    const prefix = category === 'id' ? 'ids' : 'uploads'; // separate folder for IDs
+    const prefix = category === 'id' ? 'ids' : 'uploads';
     const key = `${prefix}/${userId}/${Date.now()}-${filename}`;
 
     const uploadUrl = await s3.getSignedUrlPromise('putObject', {
@@ -34,3 +49,5 @@ router.post('/get-upload-url', async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to generate upload URL' });
   }
 });
+
+module.exports = router;   // ✅ export router
