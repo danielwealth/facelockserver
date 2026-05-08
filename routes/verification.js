@@ -21,10 +21,7 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-/**
- * POST /verify/document
- * Submit verification request with ID + selfie
- */
+// POST /verify/document
 router.post('/document', async (req, res) => {
   try {
     const { files } = req; // assuming multer middleware
@@ -51,20 +48,14 @@ router.post('/document', async (req, res) => {
   }
 });
 
-/**
- * GET /verify/document/status/:jobId
- * Check job status
- */
+// GET /verify/document/status/:jobId
 router.get('/document/status/:jobId', async (req, res) => {
   const job = await VerificationJob.findOne({ jobId: req.params.jobId });
   if (!job) return res.status(404).json({ error: 'Job not found' });
   res.json({ jobId: job.jobId, status: job.status, result: job.result });
 });
 
-/**
- * GET /verify/history
- * Fetch verification history for current user
- */
+// GET /verify/history
 router.get('/history', async (req, res) => {
   try {
     const jobs = await VerificationJob.find({ userId: req.user.id })
@@ -77,10 +68,7 @@ router.get('/history', async (req, res) => {
   }
 });
 
-/**
- * POST /verify/image
- * Verify a face descriptor against stored users
- */
+// POST /verify/image
 router.post('/image', async (req, res) => {
   try {
     const { key, descriptor } = req.body || {};
