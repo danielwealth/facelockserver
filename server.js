@@ -1,3 +1,4 @@
+// server.js
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -17,66 +18,28 @@ const userRoutes = require('./routes/user');
 const imageLockRoutes = require('./routes/imageLock');
 const s3UploadRoutes = require('./routes/s3Upload');
 const saveProfileImageRoutes = require('./routes/saveProfileImage');
-const verifyDocumentRoutes = require('./routes/verifyDocument');
-const verifyIdentityRoutes = require('./routes/verifyIdentity');
-const verifyImageRoutes = require('./routes/verifyImage');
 const faceRoutes = require('./routes/faceDescriptors');
 
-
-// server/app.js (or wherever you configure middleware)
-const { createRateLimiter } = require('./middleware/rateLimiter');
-const { logEvent } = require('./services/audit'); // optional
+// ✅ Unified verification router
+const verificationRoutes = require('./routes/verification');
 
 const app = express();
-
-// create limiter with defaults or override
-const limiter = createRateLimiter({
-  ipLimit: 100,
-  ipWindowSec: 60,
-  userLimit: 40,
-  userWindowSec: 60,
-  failureThreshold: 5,
-  lockoutSec: 900
-});
-
-// attach a small wrapper to expose audit logging to req
-app.use((req, res, next) => {
-  req.logEvent = async (payload) => {
-    try { await logEvent(payload); } catch (e) { /* ignore */ }
-  };
-  next();
-});
-
-// apply globally or to specific routes
-app.use(limiter);
-
-// Example: protect sensitive endpoint with extra checks
-app.post('/verify-identity', limiter, async (req, res) => {
-  // inside your route, on a failed verification attempt:
-  // await req.rateLimiter.recordFailure('invalid_key');
-});
-
-
-// ✅ Trust proxy (needed for secure cookies on Render/Heroku)
-app.set('trust proxy', 1);
 
 // ✅ Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Connected to MongoDB Atlas"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
 
-// ✅ Middleware order matters
+// ✅ Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ CORS FIRST (before routes)
 app.use(cors({
   origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true, // allow cookies/sessions
+  credentials: true,
 }));
 
-// ✅ Security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -95,7 +58,6 @@ app.use(helmet({
   },
 }));
 
-// ✅ Sessions with Mongo store
 app.use(session({
   secret: process.env.SESSION_SECRET || 'supersecret',
   resave: false,
@@ -103,16 +65,16 @@ app.use(session({
   store: MongoStore.create({
     mongoUrl: process.env.MONGO_URI,
     collectionName: 'sessions',
-    ttl: 14 * 24 * 60 * 60, // 14 days
+    ttl: 14 * 24 * 60 * 60,
   }),
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'none',
   },
 }));
 
-// ✅ Static file serving with CORP header
+// ✅ Static file serving
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
@@ -133,11 +95,8 @@ app.use('/user', userRoutes);
 app.use('/images', imageLockRoutes);
 app.use('/s3', s3UploadRoutes);
 app.use('/auth', saveProfileImageRoutes);
-app.use('/verify', verifyDocumentRoutes);   // POST /verify/document
-app.use('/verify', verifyIdentityRoutes);   // POST /verify/identity
-app.use('/verify', verifyImageRoutes);   // POST /verify/image
+app.use('/verify', verificationRoutes);   // unified verification endpoints
 app.use('/face', faceRoutes);
-
 
 // ✅ Health check
 app.get('/health', (req, res) => {
