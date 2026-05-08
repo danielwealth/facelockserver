@@ -1,16 +1,16 @@
-// server/routes/verification.js
-import express from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
-import AWS from 'aws-sdk';
-import { uploadToS3 } from '../services/s3.js';
-import { enqueueJob } from '../services/queue.js';
-import { VerificationJob } from '../models/VerificationJob.js';
-import User from '../models/User.js';
-import { decryptData } from '../services/encryption.js';
-import { getFaceDescriptor } from '../services/face.js';
-import { runOCR } from '../services/ocr.js';
-import { detectDeepfake } from '../services/deepfake.js';
+// routes/verification.js
+const express = require('express');
+const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcryptjs');
+const AWS = require('aws-sdk');
+const { uploadToS3 } = require('../services/s3.js');
+const { enqueueJob } = require('../services/queue.js');
+const { VerificationJob } = require('../models/VerificationJob.js');
+const User = require('../models/User.js');
+const { decryptData } = require('../services/encryption.js');
+const { getFaceDescriptor } = require('../services/face.js');
+const { runOCR } = require('../services/ocr.js');
+const { detectDeepfake } = require('../services/deepfake.js');
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ const s3 = new AWS.S3({
  * POST /verify/document
  * Submit verification request with ID + selfie
  */
-router.post('/verify/document', async (req, res) => {
+router.post('/document', async (req, res) => {
   try {
     const { files } = req; // assuming multer middleware
     const jobId = uuidv4();
@@ -55,7 +55,7 @@ router.post('/verify/document', async (req, res) => {
  * GET /verify/document/status/:jobId
  * Check job status
  */
-router.get('/verify/document/status/:jobId', async (req, res) => {
+router.get('/document/status/:jobId', async (req, res) => {
   const job = await VerificationJob.findOne({ jobId: req.params.jobId });
   if (!job) return res.status(404).json({ error: 'Job not found' });
   res.json({ jobId: job.jobId, status: job.status, result: job.result });
@@ -65,7 +65,7 @@ router.get('/verify/document/status/:jobId', async (req, res) => {
  * GET /verify/history
  * Fetch verification history for current user
  */
-router.get('/verify/history', async (req, res) => {
+router.get('/history', async (req, res) => {
   try {
     const jobs = await VerificationJob.find({ userId: req.user.id })
       .sort({ createdAt: -1 })
@@ -81,7 +81,7 @@ router.get('/verify/history', async (req, res) => {
  * POST /verify/image
  * Verify a face descriptor against stored users
  */
-router.post('/verify/image', async (req, res) => {
+router.post('/image', async (req, res) => {
   try {
     const { key, descriptor } = req.body || {};
     if (!key || !descriptor) {
@@ -125,4 +125,4 @@ function euclideanDistance(d1, d2) {
   return Math.sqrt(d1.reduce((sum, val, i) => sum + Math.pow(val - d2[i], 2), 0));
 }
 
-export default router;
+module.exports = router;
