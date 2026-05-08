@@ -16,7 +16,7 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-router.post('/verify-document', async (req, res) => {
+router.post('/verify/document', async (req, res) =>{
   try {
     if (!req.session?.user) return res.status(403).json({ error: 'Unauthorized' });
 
