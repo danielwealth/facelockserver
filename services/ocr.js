@@ -1,4 +1,10 @@
-// server/services/ocr.js
+// services/ocr.js
+
+/**
+ * Parse OCR text lines into structured fields
+ * @param {string[]} lines - Array of text lines from OCR
+ * @returns {Object} Parsed fields { name, dob, idNumber }
+ */
 function parseOCRText(lines) {
   const result = {};
   const text = lines.join(' ').toLowerCase();
@@ -15,8 +21,16 @@ function parseOCRText(lines) {
   return result;
 }
 
+/**
+ * Run OCR on a file path using AWS Textract (or another OCR provider)
+ * @param {string} filePath - Path to the uploaded image/document
+ * @returns {Promise<Object>} OCR result with raw text, lines, and parsed fields
+ */
 async function runOCR(filePath) {
-  // ...existing Textract logic...
+  // Example placeholder: integrate AWS Textract or another OCR provider here
+  // const response = await textract.analyzeDocument(...);
+
+  // For now, assume `response.Blocks` is available
   const textBlocks = response.Blocks
     .filter(b => b.BlockType === 'LINE')
     .map(b => b.Text);
@@ -27,3 +41,8 @@ async function runOCR(filePath) {
     parsed: parseOCRText(textBlocks),
   };
 }
+
+module.exports = {
+  parseOCRText,
+  runOCR,
+};
