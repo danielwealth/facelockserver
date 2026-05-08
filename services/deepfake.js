@@ -1,4 +1,4 @@
-// server/services/deepfake.js
+// services/deepfake.js
 const axios = require('axios');
 
 /**
@@ -9,12 +9,10 @@ const axios = require('axios');
 async function detectDeepfake(filePath) {
   try {
     // Example: send image to an external API
-    // Replace with your chosen provider (e.g., Hive, Sensity, Microsoft Video Authenticator)
+    // Replace with your chosen provider (Hive, Sensity, Microsoft Video Authenticator, etc.)
     const response = await axios.post(
       process.env.DEEPFAKE_API_URL,
-      {
-        file: filePath,
-      },
+      { file: filePath },
       {
         headers: {
           Authorization: `Bearer ${process.env.DEEPFAKE_API_KEY}`,
@@ -33,4 +31,6 @@ async function detectDeepfake(filePath) {
   }
 }
 
-module.exports = { detectDeepfake };
+module.exports = {
+  detectDeepfake,
+};
