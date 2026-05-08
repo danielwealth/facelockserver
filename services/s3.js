@@ -1,7 +1,8 @@
 // services/s3.js
-import AWS from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
+const AWS = require('aws-sdk');
+const { v4: uuidv4 } = require('uuid');
 
+// Configure S3 client
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -14,7 +15,7 @@ const s3 = new AWS.S3({
  * @param {String} key - Desired S3 key (filename)
  * @returns {String} public URL
  */
-export async function uploadToS3(file, key) {
+async function uploadToS3(file, key) {
   const params = {
     Bucket: process.env.AWS_BUCKET_NAME,
     Key: key || uuidv4(),
@@ -26,3 +27,8 @@ export async function uploadToS3(file, key) {
 
   return `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${params.Key}`;
 }
+
+module.exports = {
+  s3,
+  uploadToS3,
+};
