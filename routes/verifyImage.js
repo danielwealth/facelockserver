@@ -5,7 +5,7 @@ const User = require('../models/User');
 const { decryptData } = require('../services/encryption');
 const router = express.Router();
 
-router.post('/verify-image', async (req, res) => {
+router.post('/verify/image', async (req, res) => {
   try {
     const { key, descriptor } = req.body || {};
     if (!key || !descriptor) {
