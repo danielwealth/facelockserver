@@ -1,5 +1,5 @@
 // models/VerificationJob.js
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const VerificationJobSchema = new mongoose.Schema({
   jobId: { type: String, required: true, unique: true },
@@ -22,4 +22,6 @@ VerificationJobSchema.pre('save', function (next) {
   next();
 });
 
-export const VerificationJob = mongoose.model('VerificationJob', VerificationJobSchema);
+const VerificationJob = mongoose.model('VerificationJob', VerificationJobSchema);
+
+module.exports = VerificationJob;
