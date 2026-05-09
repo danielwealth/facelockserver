@@ -45,8 +45,6 @@ router.post(
         createdAt: new Date(),
       });
 
-      enqueueJob({ jobId, idKey, selfieKey, secretKey });
-
       await req.audit.ok({ jobId });
       res.json({ jobId, status: 'pending', message: 'Verification started' });
     } catch (err) {
