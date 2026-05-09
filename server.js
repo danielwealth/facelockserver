@@ -1,3 +1,4 @@
+ // server.js
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -5,11 +6,18 @@ const MongoStore = require('connect-mongo');
 const cors = require('cors');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
+const path = require('path');
+
+// Route modules
+const authRoutes = require('./routes/auth');
+const imageRoutes = require('./routes/imageRoutes');
+const matchRoutes = require('./routes/matchRoutes');
+const userRoutes = require('./routes/user');
+const s3UploadRoutes = require('./routes/s3Upload');
+const faceRoutes = require('./routes/faceDescriptors');
 
 // ✅ Unified verification router
 const verificationRoutes = require('./routes/verification');
-// ✅ Presigned S3 upload router
-const s3UploadRoutes = require('./routes/s3Upload');
 
 const app = express();
 
@@ -62,9 +70,16 @@ app.use(session({
   },
 }));
 
+// ✅ Static file serving removed
+
 // ✅ Routes
+app.use('/auth', authRoutes);
+app.use('/images', imageRoutes);
+app.use('/match', matchRoutes);
+app.use('/user', userRoutes);
 app.use('/s3', s3UploadRoutes);
 app.use('/verify', verificationRoutes);   // unified verification endpoints
+app.use('/face', faceRoutes);
 
 // ✅ Health check
 app.get('/health', (req, res) => {
