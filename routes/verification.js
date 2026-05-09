@@ -9,7 +9,6 @@ const validateJoi = require('../middleware/validateJoi');
 const requireAdmin = require('../middleware/requireAdmin');
 
 const VerificationJob = require('../models/VerificationJob');
-const enqueueJob = require('../services/queue');
 
 const router = express.Router();
 
