@@ -7,15 +7,16 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
  * Config defaults
  */
 const DEFAULTS = {
-  ipWindowSec: 60,           // window for IP counter
-  ipLimit: 60,               // requests per ipWindowSec
-  userWindowSec: 60,         // window for user counter
-  userLimit: 30,             // requests per userWindowSec
-  failureWindowSec: 900,     // window to count failures (15m)
-  failureThreshold: 5,       // failures before lockout
-  lockoutSec: 900,           // lockout duration (15m)
-  lockoutBackoffMultiplier: 2 // multiplier for repeated lockouts
+  ipWindowSec: 60,
+  ipLimit: 120,        // allow 120 requests/min per IP
+  userWindowSec: 60,
+  userLimit: 60,       // allow 60 requests/min per user
+  failureWindowSec: 900,
+  failureThreshold: 5,
+  lockoutSec: 900,
+  lockoutBackoffMultiplier: 2
 };
+
 
 /**
  * Helper: build keys
