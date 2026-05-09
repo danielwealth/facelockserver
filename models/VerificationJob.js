@@ -1,19 +1,28 @@
-// models/VerificationJob.js
 const mongoose = require('mongoose');
 
 const VerificationJobSchema = new mongoose.Schema({
   jobId: { type: String, required: true, unique: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  idUrl: { type: String, required: true },       // S3 link to ID document
-  selfieUrl: { type: String, required: true },   // S3 link to selfie
+
+  // ✅ Store S3 object keys instead of URLs
+  idKey: { type: String, required: true },        // S3 key for ID document
+  selfieKey: { type: String },                    // optional S3 key for selfie
+  secretKey: { type: String },                    // optional S3 key for secret doc
+
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'error'],
     default: 'pending',
   },
-  result: { type: mongoose.Schema.Types.Mixed }, // JSON details (match score, reason, etc.)
+
+  // ✅ Results from worker processing
+  ocrResult: { type: mongoose.Schema.Types.Mixed },    // OCR output
+  faceMatchResult: { type: mongoose.Schema.Types.Mixed }, // face match details
+  error: { type: String },                             // error message if failed
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  completedAt: { type: Date }
 });
 
 // Auto-update `updatedAt` on save
