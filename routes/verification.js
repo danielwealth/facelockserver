@@ -42,3 +42,42 @@ router.post('/document', async (req, res) => {
 
 // GET /verify/document/status/:jobId
 router.get('/document/status/:jobId', async (req, res) => {
+  try {
+    const job = await VerificationJob.findOne({ jobId: req.params.jobId });
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    let documentUrl = null;
+    if (job.idKey) {
+      documentUrl = await s3.getSignedUrlPromise('getObject', {
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: job.idKey,
+        Expires: 300,
+      });
+    }
+
+    res.json({
+      jobId: job.jobId,
+      status: job.status,
+      result: job.result,
+      documentUrl,
+    });
+  } catch (err) {
+    console.error('Status check error:', err);
+    res.status(500).json({ error: 'Failed to fetch job status' });
+  }
+});
+
+// GET /verify/history
+router.get('/history', async (req, res) => {
+  try {
+    const jobs = await VerificationJob.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ jobs });
+  } catch (err) {
+    console.error('Error fetching verification history:', err);
+    res.status(500).json({ error: 'Server error while fetching history' });
+  }
+});
+
+module.exports = router;
