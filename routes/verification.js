@@ -42,5 +42,3 @@ router.post('/document', async (req, res) => {
 
 // GET /verify/document/status/:jobId
 router.get('/document/status/:jobId', async (req, res) => {
-  const job = await VerificationJob.findOne({ jobId: req.params.jobId });
-  if (!job) return res.status
